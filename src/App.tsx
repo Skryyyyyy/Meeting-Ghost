@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Header } from './components/Header';
+import { LandingView } from './views/LandingView';
+import { AuthView } from './views/AuthView';
 import { HomeView } from './views/HomeView';
 import { RecordingView } from './views/RecordingView';
 import { SummaryView } from './views/SummaryView';
@@ -11,6 +13,13 @@ import { MeetingData, MeetingTemplate, ProcessingStage } from './types/meeting';
 import { AudioRecorder, resampleAudioBlobTo16kHz } from './services/audio';
 import { transcribeAudio, summarizeTranscript } from './services/aiPipeline';
 import {
+  isVaultSetup,
+  isVaultUnlocked,
+  lockVault,
+  getVaultUsername,
+  verifyVaultPin,
+} from './services/auth';
+import {
   getMeetings,
   saveMeeting,
   deleteMeeting as deleteMeetingFromDB,
@@ -20,6 +29,8 @@ import {
 import { SAMPLE_MEETINGS } from './services/mockMeetings';
 
 export function App() {
+  const [page, setPage] = useState<'landing' | 'auth' | 'app'>('landing');
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [view, setView] = useState<'home' | 'recording' | 'summary'>('home');
   const [meetings, setMeetings] = useState<MeetingData[]>([]);
   const [activeMeeting, setActiveMeeting] = useState<MeetingData | null>(null);
@@ -44,8 +55,27 @@ export function App() {
       clearTimeout(inactivityTimerRef.current);
     }
     inactivityTimerRef.current = setTimeout(() => {
-      setIsLocked(true);
+      if (page === 'app') {
+        setIsLocked(true);
+      }
     }, 5 * 60 * 1000);
+  };
+
+  const loadStoredMeetings = async () => {
+    try {
+      const stored = await getMeetings();
+      if (stored && stored.length > 0) {
+        setMeetings(stored);
+      } else {
+        for (const sample of SAMPLE_MEETINGS) {
+          await saveMeeting(sample);
+        }
+        setMeetings(SAMPLE_MEETINGS);
+      }
+    } catch (err) {
+      console.warn('Could not load encrypted meetings, using fallback sample:', err);
+      setMeetings(SAMPLE_MEETINGS);
+    }
   };
 
   useEffect(() => {
@@ -66,27 +96,6 @@ export function App() {
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
 
-    // Load initial encrypted meetings from IndexedDB
-    async function loadData() {
-      try {
-        const stored = await getMeetings();
-        if (stored && stored.length > 0) {
-          setMeetings(stored);
-        } else {
-          // Pre-populate with sample meetings for instant demo
-          for (const sample of SAMPLE_MEETINGS) {
-            await saveMeeting(sample);
-          }
-          setMeetings(SAMPLE_MEETINGS);
-        }
-      } catch (err) {
-        console.warn('Could not initialize IndexedDB, using in-memory samples:', err);
-        setMeetings(SAMPLE_MEETINGS);
-      }
-    }
-
-    loadData();
-
     return () => {
       window.removeEventListener('mousemove', handleActivity);
       window.removeEventListener('keydown', handleActivity);
@@ -94,7 +103,31 @@ export function App() {
       if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
       if (streamingIntervalRef.current) clearInterval(streamingIntervalRef.current);
     };
-  }, []);
+  }, [page]);
+
+  const handleLaunchApp = async () => {
+    if (isVaultUnlocked()) {
+      await loadStoredMeetings();
+      setPage('app');
+      setView('home');
+    } else {
+      setAuthMode(isVaultSetup() ? 'login' : 'signup');
+      setPage('auth');
+    }
+  };
+
+  const handleAuthenticated = async () => {
+    await loadStoredMeetings();
+    setPage('app');
+    setView('home');
+    setIsLocked(false);
+  };
+
+  const handleLockVault = () => {
+    lockVault();
+    setIsLocked(false);
+    setPage('landing');
+  };
 
   const handleStartRecording = async () => {
     try {
@@ -103,7 +136,7 @@ export function App() {
       setLivePartialTranscript('');
       setView('recording');
 
-      // Start periodic streaming partial transcription with concurrency mutex
+      // Periodic streaming partial transcription with concurrency mutex
       streamingIntervalRef.current = setInterval(async () => {
         if (!isPaused && recorderRef.current && !isStreamingTranscribingRef.current) {
           try {
@@ -119,7 +152,7 @@ export function App() {
               }
             }
           } catch (e) {
-            // Non-critical background preview ignore
+            // Background preview ignore
           } finally {
             isStreamingTranscribingRef.current = false;
           }
@@ -288,24 +321,53 @@ export function App() {
     setView('summary');
   };
 
-  const handleUnlock = (enteredPin?: string): boolean => {
-    // Standard default PIN is 0000 or empty for easy demo
-    const validPin = sessionStorage.getItem('ghost_vault_pin') || '0000';
-    if (!enteredPin || enteredPin === validPin || enteredPin === '0000') {
-      setIsLocked(false);
-      resetInactivityTimer();
-      return true;
-    }
-    return false;
+  const handleUnlockPin = (enteredPin?: string): boolean => {
+    if (!enteredPin) return false;
+    // Synchronous state check with async verify fallback
+    verifyVaultPin(enteredPin).then((res) => {
+      if (res.success) {
+        setIsLocked(false);
+        resetInactivityTimer();
+      }
+    });
+    return enteredPin.length >= 4;
   };
 
+  // 1. Landing Page View
+  if (page === 'landing') {
+    return (
+      <LandingView
+        onLaunchApp={handleLaunchApp}
+        onOpenAuth={(mode) => {
+          setAuthMode(mode);
+          setPage('auth');
+        }}
+        isVaultConfigured={isVaultSetup()}
+      />
+    );
+  }
+
+  // 2. Auth / Vault PIN View
+  if (page === 'auth') {
+    return (
+      <AuthView
+        initialMode={authMode}
+        onAuthenticated={handleAuthenticated}
+        onCancel={() => setPage('landing')}
+      />
+    );
+  }
+
+  // 3. Main Dashboard App View
   return (
     <div className="min-h-screen bg-white text-zinc-900 flex flex-col">
       <Header
         onOpenSettings={() => setIsSettingsOpen(true)}
         onNewRecording={handleStartRecording}
         onOpenGlobalTasks={() => setIsGlobalTasksOpen(true)}
-        onLockScreen={() => setIsLocked(true)}
+        onLockScreen={handleLockVault}
+        onNavigateLanding={() => setPage('landing')}
+        userName={getVaultUsername()}
         hasWebGPU={hasWebGPU}
       />
 
@@ -355,7 +417,7 @@ export function App() {
       {/* Inactivity Privacy Lock */}
       <InactivityLock
         isLocked={isLocked}
-        onUnlock={handleUnlock}
+        onUnlock={handleUnlockPin}
       />
 
       {/* Processing Modal Overlay */}

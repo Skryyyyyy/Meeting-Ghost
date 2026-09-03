@@ -1,11 +1,13 @@
 import React from 'react';
-import { ShieldCheck, Settings, Cpu, Mic, CheckSquare, Lock } from 'lucide-react';
+import { ShieldCheck, Settings, Cpu, Mic, CheckSquare, Lock, Home } from 'lucide-react';
 
 interface HeaderProps {
   onOpenSettings: () => void;
   onNewRecording: () => void;
   onOpenGlobalTasks: () => void;
   onLockScreen: () => void;
+  onNavigateLanding: () => void;
+  userName?: string;
   hasWebGPU: boolean;
 }
 
@@ -14,12 +16,14 @@ export const Header: React.FC<HeaderProps> = ({
   onNewRecording,
   onOpenGlobalTasks,
   onLockScreen,
+  onNavigateLanding,
+  userName = 'Vault Owner',
   hasWebGPU,
 }) => {
   return (
     <header className="border-b border-zinc-200 bg-white/90 backdrop-blur-md sticky top-0 z-30">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-        <div className="flex items-center space-x-3 cursor-pointer" onClick={() => window.location.reload()}>
+        <div className="flex items-center space-x-3 cursor-pointer" onClick={onNavigateLanding}>
           <div className="w-10 h-10 rounded-xl bg-zinc-900 text-white flex items-center justify-center shadow-md shadow-zinc-200">
             <span className="text-xl select-none">👻</span>
           </div>
@@ -34,9 +38,9 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2 sm:space-x-3">
           {/* Monochromatic Trust Badge */}
-          <div className="hidden sm:flex items-center space-x-1.5 px-3 py-1 rounded-full bg-zinc-100 border border-zinc-200 text-xs font-medium text-zinc-800">
+          <div className="hidden lg:flex items-center space-x-1.5 px-3 py-1 rounded-full bg-zinc-100 border border-zinc-200 text-xs font-medium text-zinc-800">
             <ShieldCheck className="w-3.5 h-3.5 text-zinc-900" />
             <span>100% On-Device</span>
             <span className="text-zinc-400">•</span>
@@ -45,6 +49,14 @@ export const Header: React.FC<HeaderProps> = ({
               {hasWebGPU ? 'WebGPU' : 'WASM CPU'}
             </span>
           </div>
+
+          <button
+            onClick={onNavigateLanding}
+            className="p-2 rounded-xl text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 transition-colors cursor-pointer"
+            title="Return to Landing Page"
+          >
+            <Home className="w-4 h-4" />
+          </button>
 
           <button
             onClick={onOpenGlobalTasks}
@@ -65,10 +77,11 @@ export const Header: React.FC<HeaderProps> = ({
 
           <button
             onClick={onLockScreen}
-            className="p-2 rounded-xl text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 transition-colors cursor-pointer"
-            title="Lock Vault"
+            className="inline-flex items-center gap-1.5 p-2 sm:px-3 sm:py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-semibold transition-colors cursor-pointer"
+            title={`Lock vault for ${userName}`}
           >
-            <Lock className="w-4 h-4" />
+            <Lock className="w-4 h-4 text-zinc-900" />
+            <span className="hidden sm:inline">Lock Vault</span>
           </button>
 
           <button
