@@ -5,7 +5,7 @@ import { RecordingView } from './views/RecordingView';
 import { SummaryView } from './views/SummaryView';
 import { ProcessingModal } from './components/ProcessingModal';
 import { SettingsModal } from './components/SettingsModal';
-import { MeetingData, ProcessingStage } from './types/meeting';
+import { MeetingData, MeetingTemplate, ProcessingStage } from './types/meeting';
 import { AudioRecorder, resampleAudioBlobTo16kHz } from './services/audio';
 import { transcribeAudio, summarizeTranscript } from './services/aiPipeline';
 import {
@@ -25,8 +25,11 @@ export function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [hasWebGPU, setHasWebGPU] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<MeetingTemplate>('general');
+  const [livePartialTranscript, setLivePartialTranscript] = useState<string>('');
 
   const recorderRef = useRef<AudioRecorder>(new AudioRecorder());
+  const streamingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // Check WebGPU availability
@@ -54,13 +57,41 @@ export function App() {
     }
 
     loadData();
+
+    return () => {
+      if (streamingIntervalRef.current) {
+        clearInterval(streamingIntervalRef.current);
+      }
+    };
   }, []);
 
   const handleStartRecording = async () => {
     try {
       await recorderRef.current.start();
       setIsPaused(false);
+      setLivePartialTranscript('');
       setView('recording');
+
+      // Start periodic streaming partial transcription every 6 seconds
+      streamingIntervalRef.current = setInterval(async () => {
+        if (!isPaused && recorderRef.current) {
+          try {
+            const liveBlob = recorderRef.current.getLiveAudioBlob();
+            if (liveBlob && liveBlob.size > 20000) {
+              const pcm = await resampleAudioBlobTo16kHz(liveBlob);
+              if (pcm.length > 16000) {
+                // Quick transcription of recent audio
+                const result = await transcribeAudio(pcm);
+                if (result.text) {
+                  setLivePartialTranscript(result.text);
+                }
+              }
+            }
+          } catch (e) {
+            // Ignore background streaming hiccups
+          }
+        }
+      }, 6000);
     } catch (err) {
       console.error('Mic access error:', err);
       alert('Microphone access is required to record audio. Please grant permission in your browser.');
@@ -78,19 +109,28 @@ export function App() {
   };
 
   const handleCancelRecording = async () => {
+    if (streamingIntervalRef.current) {
+      clearInterval(streamingIntervalRef.current);
+      streamingIntervalRef.current = null;
+    }
     await recorderRef.current.stop();
     setIsPaused(false);
+    setLivePartialTranscript('');
     setView('home');
   };
 
   const handleStopAndProcess = async () => {
+    if (streamingIntervalRef.current) {
+      clearInterval(streamingIntervalRef.current);
+      streamingIntervalRef.current = null;
+    }
     setIsPaused(false);
     setProcessingStage('audio_prep');
     setProcessingStatus('Finalizing audio recording buffer...');
 
     try {
       const audioBlob = await recorderRef.current.stop();
-      await processAudioBlob(audioBlob, 'Meeting on ' + new Date().toLocaleDateString());
+      await processAudioBlob(audioBlob, 'Meeting on ' + new Date().toLocaleDateString(), selectedTemplate);
     } catch (err) {
       console.error('Processing error:', err);
       alert('An error occurred during on-device processing: ' + err);
@@ -103,7 +143,7 @@ export function App() {
     setProcessingStage('audio_prep');
     setProcessingStatus(`Loading uploaded file "${file.name}"...`);
     try {
-      await processAudioBlob(file, file.name.replace(/\.[^/.]+$/, ''));
+      await processAudioBlob(file, file.name.replace(/\.[^/.]+$/, ''), selectedTemplate);
     } catch (err) {
       console.error('File processing error:', err);
       alert('Failed to process uploaded audio file: ' + err);
@@ -111,7 +151,7 @@ export function App() {
     }
   };
 
-  const processAudioBlob = async (blob: Blob, defaultTitle: string) => {
+  const processAudioBlob = async (blob: Blob, defaultTitle: string, template: MeetingTemplate = 'general') => {
     setProcessingStage('audio_prep');
     setProcessingStatus('Resampling audio to 16kHz mono Float32 tensor on-device...');
     const floatArray = await resampleAudioBlobTo16kHz(blob);
@@ -125,19 +165,20 @@ export function App() {
       setProcessingStatus(msg);
     });
 
-    // LLM Summarization step
+    // LLM Summarization step with template customization
     setProcessingStage('summarizing');
-    setProcessingStatus('Extracting key decisions, tasks, and follow-up drafts with on-device LLM...');
-    const summaryResult = await summarizeTranscript(transcriptResult.text, (msg) => {
+    setProcessingStatus(`Extracting decisions & commitments with ${template.replace(/_/g, ' ')} template...`);
+    const summaryResult = await summarizeTranscript(transcriptResult.text, template, (msg) => {
       setProcessingStatus(msg);
     });
 
     setProcessingStage('drafting');
-    setProcessingStatus('Finalizing meeting record...');
+    setProcessingStatus('Finalizing meeting record & follow-up draft...');
 
     const newMeeting: MeetingData = {
       id: `meet-${Date.now()}`,
       title: summaryResult.title || defaultTitle,
+      template,
       createdAt: Date.now(),
       durationSeconds: durationSeconds || 60,
       audioBlob: blob,
@@ -228,6 +269,9 @@ export function App() {
             onResume={handleResumeRecording}
             isPaused={isPaused}
             getWaveformData={(arr) => recorderRef.current.getWaveformData(arr)}
+            selectedTemplate={selectedTemplate}
+            onSelectTemplate={setSelectedTemplate}
+            livePartialTranscript={livePartialTranscript}
           />
         )}
 

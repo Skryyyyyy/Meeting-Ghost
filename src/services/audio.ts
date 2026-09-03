@@ -59,6 +59,13 @@ export class AudioRecorder {
     }
   }
 
+  getLiveAudioBlob(): Blob | null {
+    if (this.audioChunks.length === 0) return null;
+    return new Blob(this.audioChunks, {
+      type: this.mediaRecorder?.mimeType || 'audio/webm',
+    });
+  }
+
   getWaveformData(dataArray: Uint8Array): void {
     if (this.analyser) {
       this.analyser.getByteFrequencyData(dataArray as any);

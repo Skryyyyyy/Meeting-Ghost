@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, Search, MessageSquare } from 'lucide-react';
+import { ChevronDown, ChevronUp, Search, MessageSquare, Play, Volume2 } from 'lucide-react';
 import { TranscriptSegment } from '../types/meeting';
 
 interface TranscriptViewerProps {
@@ -7,9 +7,15 @@ interface TranscriptViewerProps {
     text: string;
     chunks: TranscriptSegment[];
   };
+  audioUrl?: string | null;
+  onSeekAudio?: (timestampSeconds: number) => void;
 }
 
-export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({ transcript }) => {
+export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({
+  transcript,
+  audioUrl,
+  onSeekAudio,
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -35,6 +41,11 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({ transcript }
           <span className="text-xs text-zinc-500 font-medium">
             ({transcript.chunks.length} segments)
           </span>
+          {audioUrl && (
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-zinc-100 text-zinc-800 border border-zinc-200">
+              <Volume2 className="w-3 h-3 text-zinc-900" /> Audio Synced
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2 text-zinc-500">
           <span className="text-xs font-semibold">{isOpen ? 'Collapse' : 'Expand'}</span>
@@ -63,12 +74,17 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({ transcript }
               filteredChunks.map((chunk, idx) => (
                 <div
                   key={idx}
-                  className="flex items-start gap-3 p-3 rounded-xl hover:bg-zinc-50 transition-colors text-xs border border-transparent hover:border-zinc-200"
+                  className="group flex items-start gap-3 p-3 rounded-xl hover:bg-zinc-50 transition-colors text-xs border border-transparent hover:border-zinc-200"
                 >
-                  <span className="font-mono text-zinc-800 shrink-0 select-none bg-zinc-100 px-2 py-0.5 rounded-md border border-zinc-200 font-medium">
+                  <button
+                    onClick={() => onSeekAudio && onSeekAudio(chunk.timestamp[0])}
+                    className="font-mono text-zinc-800 shrink-0 select-none bg-zinc-100 hover:bg-zinc-900 hover:text-white px-2.5 py-1 rounded-lg border border-zinc-200 font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    title="Jump to audio segment"
+                  >
+                    <Play className="w-2.5 h-2.5 fill-current" />
                     {formatTimestamp(chunk.timestamp[0])}
-                  </span>
-                  <p className="text-zinc-700 leading-relaxed font-normal">{chunk.text}</p>
+                  </button>
+                  <p className="text-zinc-700 leading-relaxed font-normal flex-1 pt-0.5">{chunk.text}</p>
                 </div>
               ))
             )}

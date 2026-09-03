@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Square, Pause, Play, X, Shield, Activity } from 'lucide-react';
+import { Square, Pause, Play, X, Shield, Activity, Sparkles, MessageSquare } from 'lucide-react';
 import { LiveWaveform } from '../components/LiveWaveform';
+import { MeetingTemplate } from '../types/meeting';
 
 interface RecordingViewProps {
   onStopAndProcess: () => void;
@@ -9,6 +10,9 @@ interface RecordingViewProps {
   onResume: () => void;
   isPaused: boolean;
   getWaveformData: (dataArray: Uint8Array) => void;
+  selectedTemplate: MeetingTemplate;
+  onSelectTemplate: (t: MeetingTemplate) => void;
+  livePartialTranscript?: string;
 }
 
 export const RecordingView: React.FC<RecordingViewProps> = ({
@@ -18,6 +22,9 @@ export const RecordingView: React.FC<RecordingViewProps> = ({
   onResume,
   isPaused,
   getWaveformData,
+  selectedTemplate,
+  onSelectTemplate,
+  livePartialTranscript,
 }) => {
   const [seconds, setSeconds] = useState(0);
 
@@ -46,10 +53,18 @@ export const RecordingView: React.FC<RecordingViewProps> = ({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const templates: { id: MeetingTemplate; label: string; desc: string }[] = [
+    { id: 'general', label: 'General Sync', desc: 'Standard overview & commitments' },
+    { id: 'one_on_one', label: '1:1 Growth Sync', desc: 'Feedback, goals & personal blockers' },
+    { id: 'tech_architecture', label: 'Tech Architecture', desc: 'SLA, trade-offs & architecture debt' },
+    { id: 'sales_call', label: 'Sales Discovery', desc: 'Budget, decision makers & deal next steps' },
+    { id: 'incident_postmortem', label: 'Incident Postmortem', desc: 'Root cause, timeline & prevention' },
+  ];
+
   return (
-    <div className="max-w-2xl mx-auto px-4 py-12 flex flex-col items-center justify-center min-h-[75vh]">
+    <div className="max-w-3xl mx-auto px-4 py-8 flex flex-col items-center justify-center min-h-[75vh]">
       {/* Live Badge */}
-      <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-zinc-100 border border-zinc-200 mb-8 shadow-xs">
+      <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-zinc-100 border border-zinc-200 mb-6 shadow-xs">
         <span className="relative flex h-2.5 w-2.5">
           {!isPaused && (
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-zinc-900 opacity-75"></span>
@@ -71,17 +86,61 @@ export const RecordingView: React.FC<RecordingViewProps> = ({
       </div>
 
       {/* Timer */}
-      <div className="text-6xl sm:text-7xl font-extrabold font-mono text-zinc-900 tracking-tight mb-8 select-none">
+      <div className="text-6xl sm:text-7xl font-extrabold font-mono text-zinc-900 tracking-tight mb-6 select-none">
         {formatTime(seconds)}
       </div>
 
       {/* Real-time Waveform Canvas */}
-      <div className="w-full mb-10">
+      <div className="w-full mb-6">
         <LiveWaveform
           getWaveformData={getWaveformData}
           isRecording={true}
           isPaused={isPaused}
         />
+      </div>
+
+      {/* Live Scrolling Partial Transcript (Streaming ASR Preview) */}
+      <div className="w-full mb-6 p-4 rounded-2xl bg-zinc-50 border border-zinc-200 shadow-inner">
+        <div className="flex items-center gap-2 mb-1.5 text-xs font-bold text-zinc-500 uppercase tracking-wider">
+          <MessageSquare className="w-3.5 h-3.5 text-zinc-900" />
+          <span>Live Speech Stream (On-Device Whisper)</span>
+        </div>
+        <p className="text-xs sm:text-sm text-zinc-800 font-mono italic leading-relaxed min-h-[2.5rem]">
+          {livePartialTranscript || (
+            <span className="text-zinc-400 not-italic">
+              Listening for speech... (whisper.cpp / WebGPU real-time stream)
+            </span>
+          )}
+        </p>
+      </div>
+
+      {/* Meeting Template Selector */}
+      <div className="w-full mb-8">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-zinc-900" /> Meeting Template Focus
+          </span>
+          <span className="text-[11px] text-zinc-400">Tailors LLM structured extraction</span>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {templates.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => onSelectTemplate(t.id)}
+              className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                selectedTemplate === t.id
+                  ? 'bg-zinc-900 text-white border-zinc-900 shadow-xs'
+                  : 'bg-white text-zinc-700 border-zinc-200 hover:border-zinc-300'
+              }`}
+            >
+              <div className="font-bold text-xs">{t.label}</div>
+              <div className={`text-[10px] truncate mt-0.5 ${selectedTemplate === t.id ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                {t.desc}
+              </div>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Controls */}
@@ -123,7 +182,7 @@ export const RecordingView: React.FC<RecordingViewProps> = ({
 
       <p className="text-xs text-zinc-500 mt-8 text-center flex items-center gap-1.5 font-medium">
         <Activity className="w-3.5 h-3.5 text-zinc-900" />
-        Audio is buffered in-memory only. Transcription starts automatically upon stopping.
+        Audio is buffered in-memory only. Full transcription and summary start automatically upon stopping.
       </p>
     </div>
   );

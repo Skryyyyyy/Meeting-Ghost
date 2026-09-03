@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Clock, Calendar, ShieldCheck, CheckCircle, ListChecks, FileText, Share2, Edit3, Check } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ArrowLeft, Clock, Calendar, ShieldCheck, CheckCircle, ListChecks, FileText, Share2, Edit3, Check, Play, Pause } from 'lucide-react';
 import { MeetingData, ActionItem } from '../types/meeting';
 import { ActionItemsList } from '../components/ActionItemsList';
 import { FollowUpComposer } from '../components/FollowUpComposer';
@@ -18,7 +18,25 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [title, setTitle] = useState(meeting.title);
-  const [activeTab, setActiveTab] = useState<'summary' | 'actions' | 'followup' | 'transcript'>('summary');
+  const [activeTab, setActiveTab] = useState<'summary' | 'actions' | 'followup'>('summary');
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [audioCurrentTime, setAudioCurrentTime] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(0);
+
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (meeting.audioBlob) {
+      const url = URL.createObjectURL(meeting.audioBlob);
+      setAudioUrl(url);
+      return () => {
+        URL.revokeObjectURL(url);
+      };
+    } else {
+      setAudioUrl(null);
+    }
+  }, [meeting.audioBlob]);
 
   const formattedDate = new Intl.DateTimeFormat('en-US', {
     dateStyle: 'full',
@@ -49,6 +67,24 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
 
   const handleUpdateDraft = (newDraft: string) => {
     onUpdateMeeting({ ...meeting, followUpDraft: newDraft });
+  };
+
+  const toggleAudioPlay = () => {
+    if (!audioRef.current) return;
+    if (isPlayingAudio) {
+      audioRef.current.pause();
+      setIsPlayingAudio(false);
+    } else {
+      audioRef.current.play();
+      setIsPlayingAudio(true);
+    }
+  };
+
+  const handleSeekAudio = (timestampSeconds: number) => {
+    if (!audioRef.current) return;
+    audioRef.current.currentTime = timestampSeconds;
+    audioRef.current.play();
+    setIsPlayingAudio(true);
   };
 
   return (
@@ -113,6 +149,58 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
             >
               <Edit3 className="w-4 h-4" />
             </button>
+          </div>
+        )}
+
+        {/* Audio Player Bar if audio is present */}
+        {audioUrl && (
+          <div className="mt-5 pt-4 border-t border-zinc-200 flex flex-col sm:flex-row items-center gap-4">
+            <audio
+              ref={audioRef}
+              src={audioUrl}
+              onTimeUpdate={() => {
+                if (audioRef.current) {
+                  setAudioCurrentTime(audioRef.current.currentTime);
+                }
+              }}
+              onLoadedMetadata={() => {
+                if (audioRef.current) {
+                  setAudioDuration(audioRef.current.duration);
+                }
+              }}
+              onEnded={() => setIsPlayingAudio(false)}
+            />
+
+            <button
+              onClick={toggleAudioPlay}
+              className="p-3 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl flex items-center gap-2 font-bold text-xs transition-colors cursor-pointer shrink-0"
+            >
+              {isPlayingAudio ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
+              <span>{isPlayingAudio ? 'Pause Audio' : 'Play Audio Sync'}</span>
+            </button>
+
+            <div className="flex-1 w-full flex items-center gap-3">
+              <span className="text-xs font-mono text-zinc-600 shrink-0">
+                {Math.floor(audioCurrentTime / 60)}:{Math.floor(audioCurrentTime % 60).toString().padStart(2, '0')}
+              </span>
+              <input
+                type="range"
+                min="0"
+                max={audioDuration || 100}
+                value={audioCurrentTime}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value);
+                  if (audioRef.current) {
+                    audioRef.current.currentTime = val;
+                    setAudioCurrentTime(val);
+                  }
+                }}
+                className="w-full accent-zinc-900 cursor-pointer"
+              />
+              <span className="text-xs font-mono text-zinc-400 shrink-0">
+                {Math.floor(audioDuration / 60)}:{Math.floor(audioDuration % 60).toString().padStart(2, '0')}
+              </span>
+            </div>
           </div>
         )}
 
@@ -223,6 +311,7 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
         {activeTab === 'actions' && (
           <ActionItemsList
             actionItems={meeting.actionItems}
+            meetingTitle={meeting.title}
             onToggleComplete={handleToggleAction}
             onUpdateAction={handleUpdateActions}
           />
@@ -236,8 +325,12 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
           />
         )}
 
-        {/* Collapsible Full Transcript Viewer */}
-        <TranscriptViewer transcript={meeting.transcript} />
+        {/* Collapsible Full Transcript Viewer with Audio Sync Timestamp Seek */}
+        <TranscriptViewer
+          transcript={meeting.transcript}
+          audioUrl={audioUrl}
+          onSeekAudio={handleSeekAudio}
+        />
       </div>
     </div>
   );

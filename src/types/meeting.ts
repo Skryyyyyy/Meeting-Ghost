@@ -17,9 +17,12 @@ export interface SummaryData {
   decisions: string[];
 }
 
+export type MeetingTemplate = 'general' | 'one_on_one' | 'tech_architecture' | 'sales_call' | 'incident_postmortem';
+
 export interface MeetingData {
   id: string;
   title: string;
+  template?: MeetingTemplate;
   createdAt: number;
   durationSeconds: number;
   audioBlob?: Blob;

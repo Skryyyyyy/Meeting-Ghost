@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
-import { CheckCircle, Circle, User, Calendar, Plus, Trash2 } from 'lucide-react';
+import { CheckCircle, Circle, User, Calendar, Plus, Trash2, CalendarPlus } from 'lucide-react';
 import { ActionItem } from '../types/meeting';
+import { exportToCalendarICS } from '../services/calendarExporter';
 
 interface ActionItemsListProps {
   actionItems: ActionItem[];
+  meetingTitle?: string;
   onToggleComplete: (id: string) => void;
   onUpdateAction?: (updatedItems: ActionItem[]) => void;
 }
 
 export const ActionItemsList: React.FC<ActionItemsListProps> = ({
   actionItems,
+  meetingTitle = 'Meeting',
   onToggleComplete,
   onUpdateAction,
 }) => {
@@ -46,6 +49,10 @@ export const ActionItemsList: React.FC<ActionItemsListProps> = ({
     }
   };
 
+  const handleExportCalendar = () => {
+    exportToCalendarICS(meetingTitle, actionItems);
+  };
+
   return (
     <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
       <div className="flex items-center justify-between mb-4">
@@ -57,15 +64,28 @@ export const ActionItemsList: React.FC<ActionItemsListProps> = ({
           </span>
         </div>
 
-        {!isAdding && (
-          <button
-            onClick={() => setIsAdding(true)}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-900 border border-zinc-200 transition-colors cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Add Action
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {actionItems.length > 0 && (
+            <button
+              onClick={handleExportCalendar}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-900 border border-zinc-200 transition-colors cursor-pointer"
+              title="Export all action items to Apple/Google/Outlook Calendar (.ics)"
+            >
+              <CalendarPlus className="w-3.5 h-3.5 text-zinc-900" />
+              Export .ics
+            </button>
+          )}
+
+          {!isAdding && (
+            <button
+              onClick={() => setIsAdding(true)}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white transition-colors cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Add Action
+            </button>
+          )}
+        </div>
       </div>
 
       {actionItems.length === 0 && !isAdding ? (
