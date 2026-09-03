@@ -10,11 +10,23 @@ import {
   User as FirebaseUser,
   onAuthStateChanged,
 } from 'firebase/auth';
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  getDoc,
+  getDocs,
+  deleteDoc,
+  collection,
+  query,
+  orderBy,
+  Firestore,
+} from 'firebase/firestore';
 
-// Your live Firebase configuration for Meeting Ghost
+// Firebase configuration for Meeting Ghost (configured via environment variables or defaults)
 const metaEnv = (import.meta as any).env || {};
 export const firebaseConfig = {
-  apiKey: metaEnv.VITE_FIREBASE_API_KEY || "AIzaSyDBF3Y0gYJ1ms9fHjRDqPAurv49CTbc0d8",
+  apiKey: metaEnv.VITE_FIREBASE_API_KEY || "YOUR_FIREBASE_API_KEY",
   authDomain: metaEnv.VITE_FIREBASE_AUTH_DOMAIN || "meeting-ghost-dd6b2.firebaseapp.com",
   projectId: metaEnv.VITE_FIREBASE_PROJECT_ID || "meeting-ghost-dd6b2",
   storageBucket: metaEnv.VITE_FIREBASE_STORAGE_BUCKET || "meeting-ghost-dd6b2.firebasestorage.app",
@@ -38,6 +50,7 @@ export function getFirebaseApp() {
 
 export const app = getFirebaseApp();
 export const auth = app ? getAuth(app) : null;
+export const db: Firestore | null = app ? getFirestore(app) : null;
 export const googleProvider = new GoogleAuthProvider();
 
 export {
@@ -47,5 +60,13 @@ export {
   sendPasswordResetEmail,
   signOut,
   onAuthStateChanged,
+  doc,
+  setDoc,
+  getDoc,
+  getDocs,
+  deleteDoc,
+  collection,
+  query,
+  orderBy,
 };
 export type { FirebaseUser };

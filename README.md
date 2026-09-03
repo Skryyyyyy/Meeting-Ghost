@@ -101,6 +101,7 @@ Detailed engineering logs of every phase are maintained in the [`history/`](hist
 - [`history/07-landing-page-and-vault-auth-system.md`](history/07-landing-page-and-vault-auth-system.md) — Monochromatic landing page, Master PIN setup/login, and brute-force lockout defenses.
 - [`history/08-firebase-google-auth-and-privacy-center.md`](history/08-firebase-google-auth-and-privacy-center.md) — Firebase Google & Email auth, SQLi defense, Master PIN reset, cookie preferences, and GDPR data export/purge.
 - [`history/09-firebase-credentials-and-csp-configuration.md`](history/09-firebase-credentials-and-csp-configuration.md) — Live Firebase configuration, Google OAuth integration, and CSP whitelisting.
+- [`history/10-backend-firestore-sync-and-security-rules.md`](history/10-backend-firestore-sync-and-security-rules.md) — Firestore backend integration, zero-knowledge cloud backup, production security rules, and secrets isolation.
 
 ---
 

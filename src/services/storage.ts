@@ -1,6 +1,7 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 import { MeetingData } from '../types/meeting';
 import { encryptData, decryptData } from './crypto';
+import { db, auth, doc, setDoc, getDocs, deleteDoc, collection } from './firebase';
 
 interface StoredMeetingRecord {
   id: string;
@@ -17,7 +18,7 @@ interface MeetingDB extends DBSchema {
 }
 
 const DB_NAME = 'meeting-ghost-db';
-const DB_VERSION = 2; // Incremented for encryption support
+const DB_VERSION = 2;
 
 let dbPromise: Promise<IDBPDatabase<MeetingDB>> | null = null;
 let currentVaultPassphrase: string = typeof sessionStorage !== 'undefined' 
@@ -51,7 +52,7 @@ function getDB() {
 }
 
 export async function saveMeeting(meeting: MeetingData): Promise<void> {
-  const db = await getDB();
+  const localDb = await getDB();
   const serialized = JSON.stringify(meeting);
   const encryptedPayload = await encryptData(serialized, currentVaultPassphrase);
 
@@ -61,12 +62,30 @@ export async function saveMeeting(meeting: MeetingData): Promise<void> {
     encryptedPayload,
   };
 
-  await db.put('meetings', record);
+  // 1. Save to local encrypted IndexedDB
+  await localDb.put('meetings', record);
+
+  // 2. Synchronize to Firestore Backend Vault (Zero-Knowledge: ciphertext only)
+  try {
+    const currentUser = auth?.currentUser;
+    if (currentUser && db) {
+      const userMeetingRef = doc(db, 'users', currentUser.uid, 'meetings', meeting.id);
+      await setDoc(userMeetingRef, {
+        id: meeting.id,
+        createdAt: meeting.createdAt,
+        encryptedPayload,
+        updatedAt: Date.now(),
+      });
+    }
+  } catch (err) {
+    // Non-critical background sync fallback (offline first)
+    console.warn('Backend sync deferred (offline or permission required):', err);
+  }
 }
 
 export async function getMeetings(): Promise<MeetingData[]> {
-  const db = await getDB();
-  const allRecords = await db.getAllFromIndex('meetings', 'by-date');
+  const localDb = await getDB();
+  const allRecords = await localDb.getAllFromIndex('meetings', 'by-date');
   
   const decryptedMeetings: MeetingData[] = [];
   for (const record of allRecords) {
@@ -83,8 +102,8 @@ export async function getMeetings(): Promise<MeetingData[]> {
 }
 
 export async function getMeetingById(id: string): Promise<MeetingData | undefined> {
-  const db = await getDB();
-  const record = await db.get('meetings', id);
+  const localDb = await getDB();
+  const record = await localDb.get('meetings', id);
   if (!record) return undefined;
 
   try {
@@ -97,8 +116,19 @@ export async function getMeetingById(id: string): Promise<MeetingData | undefine
 }
 
 export async function deleteMeeting(id: string): Promise<void> {
-  const db = await getDB();
-  await db.delete('meetings', id);
+  const localDb = await getDB();
+  await localDb.delete('meetings', id);
+
+  // Synchronize deletion to Firestore
+  try {
+    const currentUser = auth?.currentUser;
+    if (currentUser && db) {
+      const userMeetingRef = doc(db, 'users', currentUser.uid, 'meetings', id);
+      await deleteDoc(userMeetingRef);
+    }
+  } catch (err) {
+    console.warn('Backend deletion deferred:', err);
+  }
 }
 
 export async function updateActionItemStatus(
@@ -118,4 +148,31 @@ export async function updateActionItemStatus(
 
 export async function updateMeeting(meeting: MeetingData): Promise<void> {
   await saveMeeting(meeting);
+}
+
+/**
+ * Cloud Sync: Pull remote encrypted backups from Firestore into local vault
+ */
+export async function syncFromBackendCloud(): Promise<number> {
+  const currentUser = auth?.currentUser;
+  if (!currentUser || !db) return 0;
+
+  try {
+    const meetingsCol = collection(db, 'users', currentUser.uid, 'meetings');
+    const snapshot = await getDocs(meetingsCol);
+    const localDb = await getDB();
+    let imported = 0;
+
+    for (const docSnap of snapshot.docs) {
+      const data = docSnap.data() as StoredMeetingRecord;
+      if (data && data.encryptedPayload) {
+        await localDb.put('meetings', data);
+        imported++;
+      }
+    }
+    return imported;
+  } catch (err) {
+    console.warn('Backend sync from cloud error:', err);
+    return 0;
+  }
 }
