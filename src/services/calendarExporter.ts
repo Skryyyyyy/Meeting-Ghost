@@ -1,5 +1,17 @@
 import { ActionItem } from '../types/meeting';
 
+/**
+ * Escapes characters according to RFC 5545 §3.3.11 (Text Value)
+ * Backslash, semicolon, and comma must be escaped, and newlines must be converted to \n
+ */
+function escapeICSValue(text: string): string {
+  return text
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\r\n|\r|\n/g, '\\n');
+}
+
 export function exportToCalendarICS(meetingTitle: string, actionItems: ActionItem[]): void {
   const pendingActions = actionItems.filter(a => !a.completed);
   if (pendingActions.length === 0) {
@@ -14,7 +26,7 @@ export function exportToCalendarICS(meetingTitle: string, actionItems: ActionIte
 
   const createdStamp = formatICSDate(now);
   
-  // Create an event scheduled for tomorrow 9 AM
+  // Schedule commitment reminder for tomorrow 9 AM
   const startDate = new Date();
   startDate.setDate(startDate.getDate() + 1);
   startDate.setHours(9, 0, 0, 0);
@@ -32,8 +44,10 @@ export function exportToCalendarICS(meetingTitle: string, actionItems: ActionIte
 
   pendingActions.forEach((action, idx) => {
     const uid = `ghost-${Date.now()}-${idx}@meetingghost.local`;
-    const summary = `[Action Item] ${action.owner}: ${action.task}`;
-    const description = `Meeting: ${meetingTitle}\\nAssignee: ${action.owner}\\nTask: ${action.task}\\nDue: ${action.due || 'Not specified'}`;
+    const cleanSummary = escapeICSValue(`[Action Item] ${action.owner}: ${action.task}`);
+    const cleanDesc = escapeICSValue(
+      `Meeting: ${meetingTitle}\nAssignee: ${action.owner}\nTask: ${action.task}\nDue: ${action.due || 'Not specified'}`
+    );
 
     icsContent.push(
       'BEGIN:VEVENT',
@@ -41,8 +55,8 @@ export function exportToCalendarICS(meetingTitle: string, actionItems: ActionIte
       `DTSTAMP:${createdStamp}`,
       `DTSTART:${formatICSDate(startDate)}`,
       `DTEND:${formatICSDate(endDate)}`,
-      `SUMMARY:${summary.replace(/\n/g, ' ')}`,
-      `DESCRIPTION:${description}`,
+      `SUMMARY:${cleanSummary}`,
+      `DESCRIPTION:${cleanDesc}`,
       'STATUS:CONFIRMED',
       'BEGIN:VALARM',
       'TRIGGER:-PT15M',

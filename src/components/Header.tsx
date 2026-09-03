@@ -1,15 +1,19 @@
 import React from 'react';
-import { ShieldCheck, Settings, Cpu, Mic } from 'lucide-react';
+import { ShieldCheck, Settings, Cpu, Mic, CheckSquare, Lock } from 'lucide-react';
 
 interface HeaderProps {
   onOpenSettings: () => void;
   onNewRecording: () => void;
+  onOpenGlobalTasks: () => void;
+  onLockScreen: () => void;
   hasWebGPU: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   onOpenSettings,
   onNewRecording,
+  onOpenGlobalTasks,
+  onLockScreen,
   hasWebGPU,
 }) => {
   return (
@@ -43,11 +47,28 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           <button
+            onClick={onOpenGlobalTasks}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-semibold transition-colors cursor-pointer"
+            title="View all action items across all meetings"
+          >
+            <CheckSquare className="w-3.5 h-3.5 text-zinc-900" />
+            <span className="hidden sm:inline">All Tasks</span>
+          </button>
+
+          <button
             onClick={onNewRecording}
             className="hidden md:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold transition-all shadow-sm cursor-pointer"
           >
             <Mic className="w-3.5 h-3.5" />
             New Recording
+          </button>
+
+          <button
+            onClick={onLockScreen}
+            className="p-2 rounded-xl text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 transition-colors cursor-pointer"
+            title="Lock Vault"
+          >
+            <Lock className="w-4 h-4" />
           </button>
 
           <button

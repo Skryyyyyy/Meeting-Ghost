@@ -33,6 +33,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 50 * 1024 * 1024) {
+        alert('File is too large. Please select an audio file under 50MB for on-device processing.');
+        return;
+      }
       onUploadAudioFile(file);
     }
   };

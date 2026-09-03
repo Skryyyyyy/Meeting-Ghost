@@ -5,6 +5,8 @@ import { RecordingView } from './views/RecordingView';
 import { SummaryView } from './views/SummaryView';
 import { ProcessingModal } from './components/ProcessingModal';
 import { SettingsModal } from './components/SettingsModal';
+import { GlobalTasksModal } from './components/GlobalTasksModal';
+import { InactivityLock } from './components/InactivityLock';
 import { MeetingData, MeetingTemplate, ProcessingStage } from './types/meeting';
 import { AudioRecorder, resampleAudioBlobTo16kHz } from './services/audio';
 import { transcribeAudio, summarizeTranscript } from './services/aiPipeline';
@@ -13,6 +15,7 @@ import {
   saveMeeting,
   deleteMeeting as deleteMeetingFromDB,
   updateMeeting as updateMeetingInDB,
+  updateActionItemStatus as updateActionStatusInDB,
 } from './services/storage';
 import { SAMPLE_MEETINGS } from './services/mockMeetings';
 
@@ -23,6 +26,8 @@ export function App() {
   const [processingStage, setProcessingStage] = useState<ProcessingStage>('idle');
   const [processingStatus, setProcessingStatus] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isGlobalTasksOpen, setIsGlobalTasksOpen] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
   const [hasWebGPU, setHasWebGPU] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<MeetingTemplate>('general');
@@ -30,12 +35,30 @@ export function App() {
 
   const recorderRef = useRef<AudioRecorder>(new AudioRecorder());
   const streamingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Inactivity auto-lock timer (5 minutes idle)
+  const resetInactivityTimer = () => {
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current);
+    }
+    inactivityTimerRef.current = setTimeout(() => {
+      // Auto-lock vault when user is idle for 5 mins
+      setIsLocked(true);
+    }, 5 * 60 * 1000);
+  };
 
   useEffect(() => {
     // Check WebGPU availability
     if (typeof navigator !== 'undefined' && 'gpu' in navigator && (navigator as any).gpu) {
       setHasWebGPU(true);
     }
+
+    // Set up activity listeners
+    const handleActivity = () => resetInactivityTimer();
+    window.addEventListener('mousemove', handleActivity);
+    window.addEventListener('keydown', handleActivity);
+    resetInactivityTimer();
 
     // Load initial meetings from IndexedDB
     async function loadData() {
@@ -59,9 +82,10 @@ export function App() {
     loadData();
 
     return () => {
-      if (streamingIntervalRef.current) {
-        clearInterval(streamingIntervalRef.current);
-      }
+      window.removeEventListener('mousemove', handleActivity);
+      window.removeEventListener('keydown', handleActivity);
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+      if (streamingIntervalRef.current) clearInterval(streamingIntervalRef.current);
     };
   }, []);
 
@@ -80,7 +104,6 @@ export function App() {
             if (liveBlob && liveBlob.size > 20000) {
               const pcm = await resampleAudioBlobTo16kHz(liveBlob);
               if (pcm.length > 16000) {
-                // Quick transcription of recent audio
                 const result = await transcribeAudio(pcm);
                 if (result.text) {
                   setLivePartialTranscript(result.text);
@@ -88,7 +111,7 @@ export function App() {
               }
             }
           } catch (e) {
-            // Ignore background streaming hiccups
+            // Background preview ignore
           }
         }
       }, 6000);
@@ -227,6 +250,20 @@ export function App() {
     await updateMeetingInDB(updated);
   };
 
+  const handleToggleGlobalAction = async (meetingId: string, actionId: string) => {
+    setMeetings((prev) =>
+      prev.map((m) => {
+        if (m.id !== meetingId) return m;
+        const updatedItems = m.actionItems.map((a) =>
+          a.id === actionId ? { ...a, completed: !a.completed } : a
+        );
+        const itemCompleted = updatedItems.find((a) => a.id === actionId)?.completed ?? false;
+        updateActionStatusInDB(meetingId, actionId, itemCompleted);
+        return { ...m, actionItems: updatedItems };
+      })
+    );
+  };
+
   const handleClearAllData = async () => {
     for (const m of meetings) {
       await deleteMeetingFromDB(m.id);
@@ -246,6 +283,8 @@ export function App() {
       <Header
         onOpenSettings={() => setIsSettingsOpen(true)}
         onNewRecording={handleStartRecording}
+        onOpenGlobalTasks={() => setIsGlobalTasksOpen(true)}
+        onLockScreen={() => setIsLocked(true)}
         hasWebGPU={hasWebGPU}
       />
 
@@ -283,6 +322,23 @@ export function App() {
           />
         )}
       </main>
+
+      {/* Global Commitments Rollup Modal */}
+      <GlobalTasksModal
+        isOpen={isGlobalTasksOpen}
+        onClose={() => setIsGlobalTasksOpen(false)}
+        meetings={meetings}
+        onToggleAction={handleToggleGlobalAction}
+      />
+
+      {/* Inactivity Privacy Lock */}
+      <InactivityLock
+        isLocked={isLocked}
+        onUnlock={() => {
+          setIsLocked(false);
+          resetInactivityTimer();
+        }}
+      />
 
       {/* Processing Modal Overlay */}
       {processingStage !== 'idle' && (

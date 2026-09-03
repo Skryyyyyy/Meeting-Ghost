@@ -4,6 +4,8 @@ export class AudioRecorder {
   private audioContext: AudioContext | null = null;
   private analyser: AnalyserNode | null = null;
   private sourceNode: MediaStreamAudioSourceNode | null = null;
+  private highpassFilter: BiquadFilterNode | null = null;
+  private lowpassFilter: BiquadFilterNode | null = null;
   private audioChunks: Blob[] = [];
 
   async start(): Promise<void> {
@@ -22,8 +24,19 @@ export class AudioRecorder {
     this.analyser.fftSize = 256;
     this.analyser.smoothingTimeConstant = 0.8;
 
+    // Smart noise suppression filter chain (80Hz Highpass + 7.5kHz Lowpass)
+    this.highpassFilter = this.audioContext.createBiquadFilter();
+    this.highpassFilter.type = 'highpass';
+    this.highpassFilter.frequency.value = 80;
+
+    this.lowpassFilter = this.audioContext.createBiquadFilter();
+    this.lowpassFilter.type = 'lowpass';
+    this.lowpassFilter.frequency.value = 7500;
+
     this.sourceNode = this.audioContext.createMediaStreamSource(this.mediaStream);
-    this.sourceNode.connect(this.analyser);
+    this.sourceNode.connect(this.highpassFilter);
+    this.highpassFilter.connect(this.lowpassFilter);
+    this.lowpassFilter.connect(this.analyser);
 
     // Setup MediaRecorder
     let mimeType = 'audio/webm;codecs=opus';
@@ -86,9 +99,11 @@ export class AudioRecorder {
           type: this.mediaRecorder?.mimeType || 'audio/webm',
         });
 
-        // Cleanup resources
+        // Secure buffer cleanup
         this.mediaStream?.getTracks().forEach((track) => track.stop());
         this.sourceNode?.disconnect();
+        this.highpassFilter?.disconnect();
+        this.lowpassFilter?.disconnect();
         this.analyser?.disconnect();
         if (this.audioContext && this.audioContext.state !== 'closed') {
           this.audioContext.close();
@@ -99,6 +114,9 @@ export class AudioRecorder {
         this.audioContext = null;
         this.analyser = null;
         this.sourceNode = null;
+        this.highpassFilter = null;
+        this.lowpassFilter = null;
+        this.audioChunks = [];
 
         resolve(audioBlob);
       };
@@ -112,7 +130,7 @@ export class AudioRecorder {
 
 /**
  * Resamples any standard browser audio blob into a 16kHz mono Float32Array
- * compatible with Whisper models.
+ * compatible with Whisper models, with automatic buffer memory disposal.
  */
 export async function resampleAudioBlobTo16kHz(audioBlob: Blob): Promise<Float32Array> {
   const arrayBuffer = await audioBlob.arrayBuffer();

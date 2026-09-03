@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Copy, Check, Download } from 'lucide-react';
+import { Mail, Copy, Check, Download, Printer } from 'lucide-react';
 
 interface FollowUpComposerProps {
   draft: string;
@@ -25,9 +25,20 @@ export const FollowUpComposer: React.FC<FollowUpComposerProps> = ({
   };
 
   const handleOpenMail = () => {
-    const subject = encodeURIComponent(`Recap & Next Steps: ${meetingTitle}`);
-    const body = encodeURIComponent(draft);
-    window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
+    // Sanitize subject and prevent CRLF injection
+    const sanitizedSubject = meetingTitle.replace(/[\r\n]/g, ' ').slice(0, 100);
+    const subject = encodeURIComponent(`Recap & Next Steps: ${sanitizedSubject}`);
+    
+    // Check URL length limit (approx 1800 chars safe max)
+    let bodyText = draft;
+    if (bodyText.length > 1500) {
+      bodyText = bodyText.slice(0, 1500) + '\n\n[... Full notes copied to clipboard]';
+      navigator.clipboard.writeText(draft);
+    }
+
+    const body = encodeURIComponent(bodyText);
+    const mailtoUrl = `mailto:?subject=${subject}&body=${body}`;
+    window.location.href = mailtoUrl;
   };
 
   const handleDownloadMarkdown = () => {
@@ -42,6 +53,10 @@ export const FollowUpComposer: React.FC<FollowUpComposerProps> = ({
     URL.revokeObjectURL(url);
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
     <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
       <div className="flex items-center justify-between mb-4">
@@ -54,6 +69,13 @@ export const FollowUpComposer: React.FC<FollowUpComposerProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={handlePrint}
+            className="p-2 rounded-xl text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 transition-colors cursor-pointer"
+            title="Print / Save as PDF"
+          >
+            <Printer className="w-4 h-4" />
+          </button>
           <button
             onClick={handleDownloadMarkdown}
             className="p-2 rounded-xl text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 transition-colors cursor-pointer"
