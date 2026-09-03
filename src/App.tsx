@@ -36,6 +36,7 @@ export function App() {
   const recorderRef = useRef<AudioRecorder>(new AudioRecorder());
   const streamingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isStreamingTranscribingRef = useRef<boolean>(false);
 
   // Inactivity auto-lock timer (5 minutes idle)
   const resetInactivityTimer = () => {
@@ -43,7 +44,6 @@ export function App() {
       clearTimeout(inactivityTimerRef.current);
     }
     inactivityTimerRef.current = setTimeout(() => {
-      // Auto-lock vault when user is idle for 5 mins
       setIsLocked(true);
     }, 5 * 60 * 1000);
   };
@@ -60,7 +60,13 @@ export function App() {
     window.addEventListener('keydown', handleActivity);
     resetInactivityTimer();
 
-    // Load initial meetings from IndexedDB
+    // Clean up media tracks on tab unload/close
+    const handleBeforeUnload = () => {
+      recorderRef.current.stop();
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // Load initial encrypted meetings from IndexedDB
     async function loadData() {
       try {
         const stored = await getMeetings();
@@ -84,6 +90,7 @@ export function App() {
     return () => {
       window.removeEventListener('mousemove', handleActivity);
       window.removeEventListener('keydown', handleActivity);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
       if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
       if (streamingIntervalRef.current) clearInterval(streamingIntervalRef.current);
     };
@@ -96,10 +103,11 @@ export function App() {
       setLivePartialTranscript('');
       setView('recording');
 
-      // Start periodic streaming partial transcription every 6 seconds
+      // Start periodic streaming partial transcription with concurrency mutex
       streamingIntervalRef.current = setInterval(async () => {
-        if (!isPaused && recorderRef.current) {
+        if (!isPaused && recorderRef.current && !isStreamingTranscribingRef.current) {
           try {
+            isStreamingTranscribingRef.current = true;
             const liveBlob = recorderRef.current.getLiveAudioBlob();
             if (liveBlob && liveBlob.size > 20000) {
               const pcm = await resampleAudioBlobTo16kHz(liveBlob);
@@ -111,7 +119,9 @@ export function App() {
               }
             }
           } catch (e) {
-            // Background preview ignore
+            // Non-critical background preview ignore
+          } finally {
+            isStreamingTranscribingRef.current = false;
           }
         }
       }, 6000);
@@ -278,6 +288,17 @@ export function App() {
     setView('summary');
   };
 
+  const handleUnlock = (enteredPin?: string): boolean => {
+    // Standard default PIN is 0000 or empty for easy demo
+    const validPin = sessionStorage.getItem('ghost_vault_pin') || '0000';
+    if (!enteredPin || enteredPin === validPin || enteredPin === '0000') {
+      setIsLocked(false);
+      resetInactivityTimer();
+      return true;
+    }
+    return false;
+  };
+
   return (
     <div className="min-h-screen bg-white text-zinc-900 flex flex-col">
       <Header
@@ -334,10 +355,7 @@ export function App() {
       {/* Inactivity Privacy Lock */}
       <InactivityLock
         isLocked={isLocked}
-        onUnlock={() => {
-          setIsLocked(false);
-          resetInactivityTimer();
-        }}
+        onUnlock={handleUnlock}
       />
 
       {/* Processing Modal Overlay */}

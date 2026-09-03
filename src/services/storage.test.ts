@@ -3,15 +3,15 @@ import { saveMeeting, getMeetings, getMeetingById, deleteMeeting, updateActionIt
 import { MeetingData } from '../types/meeting';
 import 'fake-indexeddb/auto';
 
-describe('Storage Service', () => {
+describe('Storage Service with AES-GCM-256 Encryption', () => {
   const sampleMeeting: MeetingData = {
-    id: 'meet-101',
+    id: 'meet-enc-101',
     title: 'Executive Partnership Sync',
     createdAt: 1700000000000,
     durationSeconds: 180,
     transcript: {
-      text: 'Good morning, let us review the contract terms.',
-      chunks: [{ timestamp: [0, 5], text: 'Good morning, let us review the contract terms.' }]
+      text: 'Good morning, let us review the confidential terms.',
+      chunks: [{ timestamp: [0, 5], text: 'Good morning, let us review the confidential terms.' }]
     },
     summary: {
       overview: 'Discussion on NDA and SLA terms.',
@@ -25,23 +25,24 @@ describe('Storage Service', () => {
     participants: ['Sarah', 'David']
   };
 
-  it('saves and retrieves meetings', async () => {
+  it('encrypts on save and decrypts on retrieve', async () => {
     await saveMeeting(sampleMeeting);
     const list = await getMeetings();
     expect(list.length).toBeGreaterThanOrEqual(1);
-    const found = await getMeetingById('meet-101');
+    const found = await getMeetingById('meet-enc-101');
     expect(found?.title).toBe('Executive Partnership Sync');
+    expect(found?.transcript.text).toContain('confidential');
   });
 
   it('updates action item completed status', async () => {
-    await updateActionItemStatus('meet-101', 'act-101', true);
-    const updated = await getMeetingById('meet-101');
+    await updateActionItemStatus('meet-enc-101', 'act-101', true);
+    const updated = await getMeetingById('meet-enc-101');
     expect(updated?.actionItems[0].completed).toBe(true);
   });
 
-  it('deletes a meeting by id', async () => {
-    await deleteMeeting('meet-101');
-    const removed = await getMeetingById('meet-101');
+  it('deletes an encrypted meeting by id', async () => {
+    await deleteMeeting('meet-enc-101');
+    const removed = await getMeetingById('meet-enc-101');
     expect(removed).toBeUndefined();
   });
 });

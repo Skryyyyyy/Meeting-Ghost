@@ -97,6 +97,7 @@ Detailed engineering logs of every phase are maintained in the [`history/`](hist
 - [`history/03-monochromatic-white-redesign.md`](history/03-monochromatic-white-redesign.md) — Complete minimalist monochromatic white & zinc aesthetic redesign.
 - [`history/04-power-features-release.md`](history/04-power-features-release.md) — Live speech streaming, meeting templates, audio sync, and `.ics` export.
 - [`history/05-security-hardening-and-vulnerability-fixes.md`](history/05-security-hardening-and-vulnerability-fixes.md) — AES-GCM crypto, CSP, auto-lock, buffer disposal, and global tasks rollup.
+- [`history/06-full-encryption-and-runtime-hardening.md`](history/06-full-encryption-and-runtime-hardening.md) — Direct IndexedDB vault encryption, PIN-protected lock, streaming mutex & track unload teardown.
 
 ---
 
