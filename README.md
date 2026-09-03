@@ -9,11 +9,12 @@
 [![Vite](https://img.shields.io/badge/Vite-6.2-black?style=flat-square&logo=vite)](https://vitejs.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-black?style=flat-square&logo=tailwindcss)](https://tailwindcss.com/)
 [![WebGPU](https://img.shields.io/badge/Hardware-WebGPU%20Accelerated-black?style=flat-square)](https://developer.mozilla.org/en-US/docs/Web/API/WebGPU_API)
+[![Security](https://img.shields.io/badge/Security-AES--GCM--256%20%7C%20CSP%20%7C%20Auto--Lock-black?style=flat-square)](history/05-security-hardening-and-vulnerability-fixes.md)
 [![Privacy](https://img.shields.io/badge/Privacy-100%25%20Offline%20%26%20On--Device-black?style=flat-square)](https://github.com/Skryyyyyy/Meeting-Ghost)
 
 <p align="center">
   <b>No cloud servers. No API keys. Zero telemetry. Zero data leaks.</b><br>
-  Record your meetings, transcribe speech, extract commitments, and compose follow-up messages entirely inside your browser sandbox.
+  Record your meetings, transcribe speech in real-time, extract commitments, and compose follow-up messages entirely inside your browser sandbox.
 </p>
 
 </div>
@@ -27,6 +28,7 @@
 | **Audio Processing** | Uploads raw voice recordings to 3rd-party servers | **100% Client-Side on your CPU / WebGPU** |
 | **Data Privacy** | Subject to cloud breaches & AI vendor training | **Zero network requests; physically cannot leak** |
 | **Offline Operation** | Fails in flights, basements, or secure zones | **Works completely offline in Airplane Mode** |
+| **Security at Rest** | Stored on 3rd party vendor database | **AES-GCM-256 Web Crypto Vault & Auto-Lock** |
 | **Marginal Cost** | Monthly SaaS subscriptions or per-minute API fees | **$0.00 — Zero token costs forever** |
 | **Confidentiality** | Incompatible with strict HR, Legal, & Medical compliance | **100% Compliant by Architecture** |
 
@@ -37,62 +39,81 @@
 ```
 ┌────────────────────────────────────── IN-BROWSER ON-DEVICE CLIENT ──────────────────────────────────────┐
 │                                                                                                          │
-│  [Audio Capture (MediaRecorder/AudioContext)] ──► [Web Audio API Resampling to 16kHz Float32 PCM]        │
+│  [Audio Capture (MediaRecorder/AudioContext)] ──► [80Hz-7.5kHz Biquad Filter Chain & Resampling]         │
 │                                                                  │                                       │
 │                                                                  ▼                                       │
 │                                              [Transformers.js WebGPU Whisper-tiny.en]                    │
 │                                                                  │ (Timestamped Transcript Segments)     │
 │                                                                  ▼                                       │
-│                                              [On-Device Structured LLM / Schema Parser]                  │
-│                                                                  │ (Strict JSON Extraction)              │
+│                                              [On-Device Structured LLM / XML Schema Parser]              │
+│                                                                  │ (Strict Template JSON Extraction)     │
 │                                                                  ▼                                       │
-│                                               [IndexedDB Local Storage (Persistent)]                     │
+│                                               [AES-GCM Encrypted IndexedDB Local Storage]                │
 │                                                                  │                                       │
-│            ┌─────────────────────────────────────────────────────┼──────────────────────────────┐        │
-│            ▼                                                     ▼                              ▼        │
-│    [Meeting Summary Screen]                           [Action Items Checklist]        [Follow-up Composer]│
-│    (Overview, Key Points, Decisions)                  (Assignee, Task, Due Date)      (Mail / Slack / MD) │
+│            ┌───────────────────────────────────┬─────────────────┴─────────────────┬───────────────────┐ │
+│            ▼                                   ▼                                   ▼                   ▼ │
+│    [Meeting Summary]                   [Action Checklist]                 [Follow-up Composer]   [Global Tasks]
+│    (Overview, Key Points, Decisions)   (Assignee, Task, Due Date)         (Mail, PDF, Copy, MD)  (All Meetings)│
 │                                                                                                          │
 └──────────────────────────────────────────────────────────────────────────────────────────────────────────┘
-      (No external network calls anywhere in this pipeline. Offline by design.)
+      (No external network calls anywhere in this pipeline. 100% offline by design.)
 ```
 
 ---
 
-## ✨ Key Features
+## ✨ Latest Updates & Key Features
 
-- **🎙️ Real-time Audio Visualizer:** High-precision Web Audio API `AnalyserNode` canvas waveform visualizer during live recording.
-- **⚡ WebGPU-Accelerated Whisper ASR:** Powered by `@huggingface/transformers` (`whisper-tiny.en`), converting speech to timestamped text with automatic WASM fallback.
-- **🧠 Structured Commitment Extraction:** Automatically breaks down complex conversations into:
-  - **Executive Overview:** High-level 2–3 sentence synthesis.
-  - **Key Points:** Bulleted core discussion highlights.
-  - **Decisions Agreed Upon:** Transparent list of settled decisions.
-  - **Action Items Table:** Assignee detection, task description, and due date detection with interactive checkable state.
-- **✉️ Instant Follow-Up Composer:** Generates polished follow-up emails and messages with one-click **Copy to Clipboard**, **Open in Mail Client (`mailto:`)**, and **Markdown Export**.
-- **📁 File Import Support:** Upload and process pre-recorded audio (`.mp3`, `.wav`, `.webm`, `.m4a`).
-- **💾 Local-First Persistence:** Full history indexed locally in browser IndexedDB via `idb` with permanent right-to-delete purge capabilities.
-- **🎨 Monochromatic Aesthetic:** Minimalist, high-contrast, distraction-free monochrome design.
+### 🎙️ 1. Real-Time Live Speech Stream
+- Streams and displays a live scrolling speech preview box during recording using chunked on-device Whisper inference.
+
+### 🎯 2. Specialized Meeting Templates
+- Choose between **General Sync**, **1:1 Growth Sync**, **Tech Architecture**, **Sales Discovery**, and **Incident Postmortem** to tailor structured extraction.
+
+### 🔊 3. Audio-Synced Playback & Timestamp Scrubbing
+- Integrated audio playback bar with scrub control. Clicking any timestamp in the full transcript instantly jumps to that second in the audio recording.
+
+### 📅 4. One-Click Calendar Export (`.ics`)
+- Export pending action items directly to Apple Calendar, Google Calendar, or Outlook with automated reminder alarms.
+
+### 📊 5. Cross-Meeting Global Tasks Hub
+- Unified "All Tasks" modal to search, filter by assignee, and check off commitments across all past meetings.
+
+### 🔒 6. Enterprise-Grade Security & Privacy Hardening
+- **AES-GCM-256 Web Crypto:** Client-side PBKDF2 key derivation and AES-GCM encryption for stored notes.
+- **Content Security Policy (CSP):** Prohibits unauthorized scripts, plugins, and remote network egress.
+- **Inactivity Auto-Lock:** Automatically locks and blurs the screen after 5 minutes of idle time.
+- **Noise Suppression Pre-Filter:** 80Hz Highpass + 7.5kHz Lowpass BiquadFilter chain for clear speech capture.
+- **Secure Buffer Disposal:** Explicit memory clearing upon recording completion.
+- **File Upload Safeguards:** 50MB client-side caps and RFC 5545 calendar value escaping.
+
+---
+
+## 📜 Development History & Change Logs
+
+Detailed engineering logs of every phase are maintained in the [`history/`](history/) folder:
+
+- [`history/01-initial-spec-and-architecture.md`](history/01-initial-spec-and-architecture.md) — Problem statement, platform selection & architecture.
+- [`history/02-scaffolding-and-core-pipeline.md`](history/02-scaffolding-and-core-pipeline.md) — Vite + React 19 scaffolding, audio engine, Whisper WebGPU & Vitest suite.
+- [`history/03-monochromatic-white-redesign.md`](history/03-monochromatic-white-redesign.md) — Complete minimalist monochromatic white & zinc aesthetic redesign.
+- [`history/04-power-features-release.md`](history/04-power-features-release.md) — Live speech streaming, meeting templates, audio sync, and `.ics` export.
+- [`history/05-security-hardening-and-vulnerability-fixes.md`](history/05-security-hardening-and-vulnerability-fixes.md) — AES-GCM crypto, CSP, auto-lock, buffer disposal, and global tasks rollup.
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Frontend:** [React 19](https://react.dev/), [TypeScript](https://www.typescriptlang.org/), [Vite](https://vitejs.dev/)
+- **Frontend:** [React 19](https://react.dev/), [TypeScript](https://www.typescriptlang.org/), [Vite 6](https://vitejs.dev/)
 - **Styling:** [Tailwind CSS v4](https://tailwindcss.com/)
 - **Icons:** [Lucide React](https://lucide.dev/)
 - **Speech-to-Text (ASR):** [@huggingface/transformers](https://huggingface.co/docs/transformers.js) (Whisper ONNX via WebGPU / WASM)
-- **Language Model & Parsing:** On-device WebLLM / Rule-augmented Schema Parser
+- **Language Model:** On-device WebLLM / Rule-augmented Schema Parser
+- **Cryptography:** Native Web Crypto API (`SubtleCrypto` AES-GCM-256)
 - **Storage:** [idb](https://github.com/jakearchibald/idb) (IndexedDB wrapper)
 - **Testing:** [Vitest](https://vitest.dev/)
 
 ---
 
 ## 🚀 Quick Start
-
-### Prerequisites
-- Node.js `v18.0.0` or higher
-- npm `v9.0.0` or higher
-- A WebGPU-capable browser (Chrome 113+, Edge 113+, or Firefox Nightly) — WASM fallback is supported automatically for other browsers.
 
 ### Installation
 
@@ -110,29 +131,13 @@ npm run dev
 
 Open **`http://localhost:5173`** in your browser.
 
----
-
-## 🧪 Testing the Application
-
-### 1. Interactive Demo Walkthrough
-1. **Instant Demo:** Click on any of the pre-loaded sample meetings (e.g. *Q3 Product Architecture & On-Device AI Review*) on the home view to test all summary and action item features without recording.
-2. **Live Test:**
-   - Click **"Start Recording"** (allow microphone permissions).
-   - Speak for 10–15 seconds:
-     > *"Hello team, let's ship the release on Friday. Alex, please review the documentation by tomorrow."*
-   - Click **"Stop & Summarize"**.
-   - Watch the on-device pipeline process audio $\to$ transcribe $\to$ extract tasks.
-3. **The Airplane Mode Proof:**
-   - Turn off your computer's Wi-Fi or disconnect your internet.
-   - Record and process a meeting — the app operates with 100% functionality with zero internet.
-
-### 2. Run Automated Test Suite
+### Run Automated Tests
 
 ```bash
 npm test
 ```
 
-### 3. Production Build
+### Production Build
 
 ```bash
 npm run build
@@ -141,50 +146,9 @@ npm run preview
 
 ---
 
-## 📂 Project Structure
+## 🛡️ Privacy & Compliance Guarantee
 
-```
-Meeting Ghost/
-├── docs/
-│   └── superpowers/
-│       ├── specs/2026-09-03-meeting-ghost-web-design.md
-│       └── plans/2026-09-03-meeting-ghost-web.md
-├── src/
-│   ├── components/
-│   │   ├── ActionItemsList.tsx      # Interactive action checklist
-│   │   ├── FollowUpComposer.tsx     # Email draft & export tools
-│   │   ├── Header.tsx               # Nav bar & on-device status badge
-│   │   ├── LiveWaveform.tsx         # Real-time Web Audio canvas visualizer
-│   │   ├── MeetingCard.tsx          # History meeting card
-│   │   ├── ProcessingModal.tsx      # Step-by-step pipeline progress
-│   │   ├── SettingsModal.tsx        # Hardware & storage management
-│   │   └── TranscriptViewer.tsx     # Timestamped searchable transcript
-│   ├── services/
-│   │   ├── aiPipeline.ts            # Transformers.js Whisper & LLM runtime
-│   │   ├── audio.ts                 # Microphone capture & 16kHz resampler
-│   │   ├── jsonParser.ts            # Robust LLM schema extractor
-│   │   ├── mockMeetings.ts          # Instant offline demo data
-│   │   └── storage.ts               # IndexedDB local database service
-│   ├── types/
-│   │   └── meeting.ts               # Data models & interfaces
-│   ├── views/
-│   │   ├── HomeView.tsx             # Main archive & action hub
-│   │   ├── RecordingView.tsx        # Active recording interface
-│   │   └── SummaryView.tsx          # Meeting details & follow-up workspace
-│   ├── App.tsx                      # Core routing & workflow orchestration
-│   ├── index.css                    # Tailwind CSS v4 definitions
-│   └── main.tsx                     # Application entry point
-├── index.html
-├── package.json
-├── tsconfig.json
-└── vite.config.ts
-```
-
----
-
-## 🛡️ Privacy Guarantee
-
-Meeting Ghost contains **zero code paths** for transmitting audio blobs, transcripts, or summaries to remote servers. All computation executes locally inside your browser's Web Worker and WebGPU contexts. Data at rest resides solely in your browser's local IndexedDB.
+Meeting Ghost contains **zero code paths** for transmitting audio blobs, transcripts, or summaries to remote servers. All computation executes locally inside your browser's Web Worker and WebGPU contexts.
 
 ---
 
