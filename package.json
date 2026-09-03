@@ -13,6 +13,7 @@
     "@huggingface/transformers": "^3.3.3",
     "@mlc-ai/web-llm": "^0.2.78",
     "clsx": "^2.1.1",
+    "firebase": "^12.18.0",
     "idb": "^8.0.2",
     "lucide-react": "^1.16.0",
     "react": "^19.0.0",

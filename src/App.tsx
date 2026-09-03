@@ -7,8 +7,10 @@ import { RecordingView } from './views/RecordingView';
 import { SummaryView } from './views/SummaryView';
 import { ProcessingModal } from './components/ProcessingModal';
 import { SettingsModal } from './components/SettingsModal';
+import { PrivacySettingsModal } from './components/PrivacySettingsModal';
 import { GlobalTasksModal } from './components/GlobalTasksModal';
 import { InactivityLock } from './components/InactivityLock';
+import { CookieBanner } from './components/CookieBanner';
 import { MeetingData, MeetingTemplate, ProcessingStage } from './types/meeting';
 import { AudioRecorder, resampleAudioBlobTo16kHz } from './services/audio';
 import { transcribeAudio, summarizeTranscript } from './services/aiPipeline';
@@ -37,6 +39,7 @@ export function App() {
   const [processingStage, setProcessingStage] = useState<ProcessingStage>('idle');
   const [processingStatus, setProcessingStatus] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
   const [isGlobalTasksOpen, setIsGlobalTasksOpen] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [hasWebGPU, setHasWebGPU] = useState(false);
@@ -323,7 +326,6 @@ export function App() {
 
   const handleUnlockPin = (enteredPin?: string): boolean => {
     if (!enteredPin) return false;
-    // Synchronous state check with async verify fallback
     verifyVaultPin(enteredPin).then((res) => {
       if (res.success) {
         setIsLocked(false);
@@ -336,25 +338,37 @@ export function App() {
   // 1. Landing Page View
   if (page === 'landing') {
     return (
-      <LandingView
-        onLaunchApp={handleLaunchApp}
-        onOpenAuth={(mode) => {
-          setAuthMode(mode);
-          setPage('auth');
-        }}
-        isVaultConfigured={isVaultSetup()}
-      />
+      <>
+        <LandingView
+          onLaunchApp={handleLaunchApp}
+          onOpenAuth={(mode) => {
+            setAuthMode(mode);
+            setPage('auth');
+          }}
+          onOpenPrivacyModal={() => setIsPrivacyModalOpen(true)}
+          isVaultConfigured={isVaultSetup()}
+        />
+        <CookieBanner onOpenPrivacyModal={() => setIsPrivacyModalOpen(true)} />
+        <PrivacySettingsModal
+          isOpen={isPrivacyModalOpen}
+          onClose={() => setIsPrivacyModalOpen(false)}
+          onClearAllData={handleClearAllData}
+        />
+      </>
     );
   }
 
   // 2. Auth / Vault PIN View
   if (page === 'auth') {
     return (
-      <AuthView
-        initialMode={authMode}
-        onAuthenticated={handleAuthenticated}
-        onCancel={() => setPage('landing')}
-      />
+      <>
+        <AuthView
+          initialMode={authMode}
+          onAuthenticated={handleAuthenticated}
+          onCancel={() => setPage('landing')}
+        />
+        <CookieBanner onOpenPrivacyModal={() => setIsPrivacyModalOpen(true)} />
+      </>
     );
   }
 
@@ -432,6 +446,16 @@ export function App() {
         onClearAllData={handleClearAllData}
         hasWebGPU={hasWebGPU}
       />
+
+      {/* Privacy & Vault Center Modal */}
+      <PrivacySettingsModal
+        isOpen={isPrivacyModalOpen}
+        onClose={() => setIsPrivacyModalOpen(false)}
+        onClearAllData={handleClearAllData}
+      />
+
+      {/* Cookie Consent Banner */}
+      <CookieBanner onOpenPrivacyModal={() => setIsPrivacyModalOpen(true)} />
     </div>
   );
 }
