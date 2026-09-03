@@ -11,22 +11,23 @@ import {
   onAuthStateChanged,
 } from 'firebase/auth';
 
-// Standard Firebase Client Config (Can be configured via environment or browser storage)
+// Your live Firebase configuration for Meeting Ghost
 const metaEnv = (import.meta as any).env || {};
-const defaultFirebaseConfig = {
-  apiKey: metaEnv.VITE_FIREBASE_API_KEY || 'AIzaSyDemoKeyForMeetingGhostLocalVault2026',
-  authDomain: metaEnv.VITE_FIREBASE_AUTH_DOMAIN || 'meeting-ghost.firebaseapp.com',
-  projectId: metaEnv.VITE_FIREBASE_PROJECT_ID || 'meeting-ghost',
-  storageBucket: metaEnv.VITE_FIREBASE_STORAGE_BUCKET || 'meeting-ghost.appspot.com',
-  messagingSenderId: metaEnv.VITE_FIREBASE_MESSAGING_SENDER_ID || '123456789012',
-  appId: metaEnv.VITE_FIREBASE_APP_ID || '1:123456789012:web:abcdef123456789',
+export const firebaseConfig = {
+  apiKey: metaEnv.VITE_FIREBASE_API_KEY || "AIzaSyDBF3Y0gYJ1ms9fHjRDqPAurv49CTbc0d8",
+  authDomain: metaEnv.VITE_FIREBASE_AUTH_DOMAIN || "meeting-ghost-dd6b2.firebaseapp.com",
+  projectId: metaEnv.VITE_FIREBASE_PROJECT_ID || "meeting-ghost-dd6b2",
+  storageBucket: metaEnv.VITE_FIREBASE_STORAGE_BUCKET || "meeting-ghost-dd6b2.firebasestorage.app",
+  messagingSenderId: metaEnv.VITE_FIREBASE_MESSAGING_SENDER_ID || "391705532619",
+  appId: metaEnv.VITE_FIREBASE_APP_ID || "1:391705532619:web:5ae44a440a0863a66e634e",
+  measurementId: metaEnv.VITE_FIREBASE_MEASUREMENT_ID || "G-F8VY4Z309Z"
 };
 
-// Initialize Firebase safely with fallback
+// Initialize Firebase safely
 export function getFirebaseApp() {
   if (getApps().length === 0) {
     try {
-      return initializeApp(defaultFirebaseConfig);
+      return initializeApp(firebaseConfig);
     } catch (e) {
       console.warn('Firebase init fallback:', e);
       return null;
