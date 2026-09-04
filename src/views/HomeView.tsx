@@ -11,6 +11,7 @@ interface HomeViewProps {
   onDeleteMeeting: (id: string, e: React.MouseEvent) => void;
   onLoadSample: (meeting: MeetingData) => void;
   onUploadAudioFile: (file: File) => void;
+  onOpenAskGhost?: () => void;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -20,16 +21,22 @@ export const HomeView: React.FC<HomeViewProps> = ({
   onDeleteMeeting,
   onLoadSample,
   onUploadAudioFile,
+  onOpenAskGhost,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [showAnalytics, setShowAnalytics] = useState(false);
 
-  const filteredMeetings = meetings.filter(
-    (m) =>
+  const filteredMeetings = meetings.filter((m) => {
+    const matchesSearch =
       m.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       m.summary.overview.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      m.participants.some((p) => p.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+      m.participants.some((p) => p.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    if (!matchesSearch) return false;
+    if (selectedCategory === 'all') return true;
+    return m.template === selectedCategory;
+  });
 
   // Compute live analytics
   const totalSeconds = meetings.reduce((acc, m) => acc + (m.durationSeconds || 60), 0);
@@ -187,7 +194,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
       </div>
 
       {/* Search and Meeting List Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
         <div>
           <h3 className="text-lg font-bold text-zinc-900">Encrypted Meeting Records</h3>
           <p className="text-xs text-zinc-500 mt-0.5">
@@ -195,16 +202,52 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </p>
         </div>
 
-        <div className="relative w-full sm:w-64">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
-          <input
-            type="text"
-            placeholder="Search meetings or notes..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-white border border-zinc-200 rounded-xl pl-9 pr-4 py-2 text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-zinc-900 transition-colors shadow-xs"
-          />
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          {onOpenAskGhost && (
+            <button
+              onClick={onOpenAskGhost}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer shrink-0"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-zinc-200" />
+              <span>Ask Ghost AI</span>
+            </button>
+          )}
+
+          <div className="relative w-full sm:w-60">
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
+            <input
+              type="text"
+              placeholder="Search meetings or notes..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-white border border-zinc-200 rounded-xl pl-9 pr-4 py-2 text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-zinc-900 transition-colors shadow-xs"
+            />
+          </div>
         </div>
+      </div>
+
+      {/* Category Filter Pills */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-6">
+        {[
+          { id: 'all', label: 'All Records' },
+          { id: 'general', label: 'General' },
+          { id: 'tech_architecture', label: 'Tech Architecture' },
+          { id: 'one_on_one', label: '1:1 Growth' },
+          { id: 'sales_call', label: 'Sales & Client' },
+          { id: 'incident_postmortem', label: 'Postmortem' },
+        ].map((cat) => (
+          <button
+            key={cat.id}
+            onClick={() => setSelectedCategory(cat.id)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer shrink-0 ${
+              selectedCategory === cat.id
+                ? 'bg-zinc-900 text-white shadow-xs'
+                : 'bg-white text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 border border-zinc-200'
+            }`}
+          >
+            {cat.label}
+          </button>
+        ))}
       </div>
 
       {/* Meeting Cards Grid */}

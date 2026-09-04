@@ -12,6 +12,7 @@ import { PrivacySettingsModal } from './components/PrivacySettingsModal';
 import { GlobalTasksModal } from './components/GlobalTasksModal';
 import { CommandPalette } from './components/CommandPalette';
 import { ProfileModal } from './components/ProfileModal';
+import { AskGhostModal } from './components/AskGhostModal';
 import { InactivityLock } from './components/InactivityLock';
 import { CookieBanner } from './components/CookieBanner';
 import { MeetingData, MeetingTemplate, ProcessingStage, TranscriptionLanguage, MeetingBookmark } from './types/meeting';
@@ -46,6 +47,7 @@ export function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isAskGhostOpen, setIsAskGhostOpen] = useState(false);
   const [isGlobalTasksOpen, setIsGlobalTasksOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
@@ -430,6 +432,7 @@ export function App() {
       <Header
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenProfile={() => setIsProfileModalOpen(true)}
+        onOpenAskGhost={() => setIsAskGhostOpen(true)}
         onNewRecording={handleStartRecording}
         onOpenGlobalTasks={() => setIsGlobalTasksOpen(true)}
         onLockScreen={handleLockVault}
@@ -447,6 +450,7 @@ export function App() {
             onDeleteMeeting={handleDeleteMeeting}
             onLoadSample={handleLoadSample}
             onUploadAudioFile={handleUploadAudioFile}
+            onOpenAskGhost={() => setIsAskGhostOpen(true)}
           />
         )}
 
@@ -490,6 +494,17 @@ export function App() {
         onOpenPrivacyModal={() => setIsPrivacyModalOpen(true)}
         onOpenGlobalTasks={() => setIsGlobalTasksOpen(true)}
         onOpenProfile={() => setIsProfileModalOpen(true)}
+      />
+
+      {/* Ask Ghost AI Modal */}
+      <AskGhostModal
+        isOpen={isAskGhostOpen}
+        onClose={() => setIsAskGhostOpen(false)}
+        meetings={meetings}
+        onSelectMeeting={(m) => {
+          setActiveMeeting(m);
+          setView('summary');
+        }}
       />
 
       {/* Profile & Account Settings Modal */}

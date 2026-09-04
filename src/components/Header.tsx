@@ -1,11 +1,12 @@
 import React from 'react';
-import { ShieldCheck, Settings, Cpu, Mic, CheckSquare, Lock, Home, User } from 'lucide-react';
+import { ShieldCheck, Settings, Cpu, Mic, CheckSquare, Lock, Home, User, Sparkles } from 'lucide-react';
 
 interface HeaderProps {
   onOpenSettings: () => void;
   onOpenProfile: () => void;
   onNewRecording: () => void;
   onOpenGlobalTasks: () => void;
+  onOpenAskGhost?: () => void;
   onLockScreen: () => void;
   onNavigateLanding: () => void;
   userName?: string;
@@ -17,6 +18,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenProfile,
   onNewRecording,
   onOpenGlobalTasks,
+  onOpenAskGhost,
   onLockScreen,
   onNavigateLanding,
   userName = 'Vault Owner',
@@ -53,6 +55,17 @@ export const Header: React.FC<HeaderProps> = ({
               {hasWebGPU ? 'WebGPU' : 'WASM CPU'}
             </span>
           </div>
+
+          {onOpenAskGhost && (
+            <button
+              onClick={onOpenAskGhost}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold transition-all shadow-xs cursor-pointer"
+              title="Ask Ghost AI across all meetings"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-zinc-200" />
+              <span>Ask Ghost</span>
+            </button>
+          )}
 
           <button
             onClick={onNavigateLanding}

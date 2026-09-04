@@ -1,17 +1,18 @@
 {
   "short_name": "Meeting Ghost",
   "name": "Meeting Ghost — 100% On-Device Meeting Recorder",
+  "description": "Private, zero-cloud AI meeting transcription, action item extractor, and executive summaries.",
   "icons": [
     {
-      "src": "/ghost.svg",
-      "type": "image/svg+xml",
+      "src": "/logo.png",
+      "type": "image/png",
       "sizes": "192x192 512x512",
       "purpose": "any maskable"
     }
   ],
   "start_url": "/",
   "background_color": "#ffffff",
-  "theme_color": "#09090b",
+  "theme_color": "#18181b",
   "display": "standalone",
   "orientation": "portrait"
 }
