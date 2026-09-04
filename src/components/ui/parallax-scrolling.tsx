@@ -5,7 +5,7 @@ import React, { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from '@studio-freight/lenis';
-import { ShieldCheck, Sparkles, Mic, Lock, Zap } from 'lucide-react';
+import { Mic, Lock, Zap } from 'lucide-react';
 
 export function ParallaxComponent() {
   const parallaxRef = useRef<HTMLDivElement>(null);
@@ -92,10 +92,6 @@ export function ParallaxComponent() {
 
             {/* Layer 3: Title & Value Proposition */}
             <div data-parallax-layer="3" className="relative z-20 max-w-3xl mx-auto px-4 text-center space-y-4">
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/15 text-xs font-semibold text-zinc-300 backdrop-blur-md">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>On-Device Speech Intelligence</span>
-              </div>
               <h2 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white leading-tight">
                 Deep Focus. <br />
                 <span className="bg-gradient-to-r from-zinc-200 via-zinc-400 to-zinc-600 bg-clip-text text-transparent">

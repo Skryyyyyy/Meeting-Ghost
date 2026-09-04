@@ -187,19 +187,6 @@ export const LandingView: React.FC<LandingViewProps> = ({
 
         {/* Hero Content */}
         <div className="relative z-10 max-w-4xl mx-auto flex flex-col items-center">
-          {/* Trust Badge */}
-          <div
-            onClick={handleProtectedClick}
-            className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium mb-6 border backdrop-blur-md cursor-pointer transition-all hover:scale-105 ${
-              isDarkMode
-                ? 'bg-white/[0.08] hover:bg-white/[0.14] border-white/15 text-zinc-200'
-                : 'bg-zinc-900/5 hover:bg-zinc-900/10 border-zinc-200 text-zinc-800'
-            }`}
-          >
-            <Lock className="w-3.5 h-3.5 text-amber-400" />
-            <span>100% Private & Secure • Zero Cloud Telemetry</span>
-          </div>
-
           <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight leading-[1.1] max-w-3xl">
             Meeting notes & action items —{' '}
             <span
@@ -328,20 +315,11 @@ export const LandingView: React.FC<LandingViewProps> = ({
       {/* Bento Grid Feature Showcase */}
       <section className="py-20 px-4 max-w-5xl mx-auto">
         <div className="text-center mb-14">
-          <div
-            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider mb-4 border ${
-              isDarkMode ? 'bg-white/5 border-white/10 text-zinc-400' : 'bg-zinc-100 border-zinc-200 text-zinc-700'
-                    ? 'bg-white/5 border-white/10 text-zinc-400' : 'bg-zinc-100 border-zinc-200 text-zinc-700'
-                }`}
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Architecture & Capabilities</span>
-              </div>
-              <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">Built for High-Stakes Confidentiality</h2>
-              <p className={`text-sm mt-3 max-w-xl mx-auto ${isDarkMode ? 'text-zinc-400' : 'text-zinc-600'}`}>
-                Every step of the audio analysis, transcript synchronization, and action checklist stays inside your local sandbox.
-              </p>
-            </div>
+          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">Built for High-Stakes Confidentiality</h2>
+          <p className={`text-sm mt-3 max-w-xl mx-auto ${isDarkMode ? 'text-zinc-400' : 'text-zinc-600'}`}>
+            Every step of audio analysis, transcript synchronization, and action checklist stays safely inside your local sandbox.
+          </p>
+        </div>
 
         {/* Bento Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
