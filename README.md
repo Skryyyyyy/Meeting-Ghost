@@ -1,20 +1,23 @@
 <div align="center">
 
+<img src="public/logo.png" alt="Meeting Ghost Logo" width="100" height="100" style="border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);" />
+
 # 👻 Meeting Ghost
 
-### **100% On-Device Meeting Recorder, Transcriber & AI Follow-Up Drafter**
+### **100% On-Device Meeting Recorder, Transcriber & AI Vault Intelligence**
 
 [![React](https://img.shields.io/badge/React-19-black?style=flat-square&logo=react)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-black?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
-[![Vite](https://img.shields.io/badge/Vite-6.2-black?style=flat-square&logo=vite)](https://vitejs.dev/)
+[![Vite](https://img.shields.io/badge/Vite-6.4-black?style=flat-square&logo=vite)](https://vitejs.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-black?style=flat-square&logo=tailwindcss)](https://tailwindcss.com/)
 [![WebGPU](https://img.shields.io/badge/Hardware-WebGPU%20Accelerated-black?style=flat-square)](https://developer.mozilla.org/en-US/docs/Web/API/WebGPU_API)
-[![Security](https://img.shields.io/badge/Security-AES--GCM--256%20%7C%20CSP%20%7C%20Auto--Lock-black?style=flat-square)](history/05-security-hardening-and-vulnerability-fixes.md)
-[![Privacy](https://img.shields.io/badge/Privacy-100%25%20Offline%20%26%20On--Device-black?style=flat-square)](https://github.com/Skryyyyyy/Meeting-Ghost)
+[![Security](https://img.shields.io/badge/Security-AES--GCM--256%20%7C%20PBKDF2%20%7C%20Auto--Lock-black?style=flat-square)](history/05-security-hardening-and-vulnerability-fixes.md)
+[![Privacy](https://img.shields.io/badge/Privacy-100%25%20Offline%20%26%20Zero%20Cloud%20Telemetry-black?style=flat-square)](https://github.com/Skryyyyyy/Meeting-Ghost)
+[![Tests](https://img.shields.io/badge/Tests-28%20Passing%20(10%20Suites)-black?style=flat-square)](https://vitest.dev/)
 
 <p align="center">
   <b>No cloud servers. No API keys. Zero telemetry. Zero data leaks.</b><br>
-  Record your meetings, transcribe speech in real-time, extract commitments, and compose follow-up messages entirely inside your browser sandbox.
+  Record your meetings, transcribe speech in real-time, extract commitments, query your archive with "Ask Ghost" AI, and export notes into any format — completely inside your browser sandbox.
 </p>
 
 </div>
@@ -29,6 +32,8 @@
 | **Data Privacy** | Subject to cloud breaches & AI vendor training | **Zero network requests; physically cannot leak** |
 | **Offline Operation** | Fails in flights, basements, or secure zones | **Works completely offline in Airplane Mode** |
 | **Security at Rest** | Stored on 3rd party vendor database | **AES-GCM-256 Web Crypto Vault & Auto-Lock** |
+| **Session Control** | Long-lived cloud tokens & background tracking | **Auto-Logout per session + optional Remember Me** |
+| **Vault Backups** | Proprietary cloud vendor lock-in | **Password-protected `.ghostvault` encrypted export/restore** |
 | **Marginal Cost** | Monthly SaaS subscriptions or per-minute API fees | **$0.00 — Zero token costs forever** |
 | **Confidentiality** | Incompatible with strict HR, Legal, & Medical compliance | **100% Compliant by Architecture** |
 
@@ -39,7 +44,7 @@
 ```
 ┌────────────────────────────────────── IN-BROWSER ON-DEVICE CLIENT ──────────────────────────────────────┐
 │                                                                                                          │
-│  [Audio Capture (MediaRecorder/AudioContext)] ──► [80Hz-7.5kHz Biquad Filter Chain & Resampling]         │
+│  [Audio Capture (MediaRecorder/AudioContext)] ──► [80Hz-7.5kHz Filter Chain & RMS VAD Speech Gating]     │
 │                                                                  │                                       │
 │                                                                  ▼                                       │
 │                                              [Transformers.js WebGPU Whisper-tiny.en]                    │
@@ -48,12 +53,12 @@
 │                                              [On-Device Structured LLM / XML Schema Parser]              │
 │                                                                  │ (Strict Template JSON Extraction)     │
 │                                                                  ▼                                       │
-│                                               [AES-GCM Encrypted IndexedDB Local Storage]                │
+│                                          [PBKDF2 + AES-GCM Encrypted IndexedDB Local Storage]            │
 │                                                                  │                                       │
-│            ┌───────────────────────────────────┬─────────────────┴─────────────────┬───────────────────┐ │
-│            ▼                                   ▼                                   ▼                   ▼ │
-│    [Meeting Summary]                   [Action Checklist]                 [Follow-up Composer]   [Global Tasks]
-│    (Overview, Key Points, Decisions)   (Assignee, Task, Due Date)         (Mail, PDF, Copy, MD)  (All Meetings)│
+│            ┌───────────────────┬─────────────────┴─────────────────┬───────────────────┬───────────────┐ │
+│            ▼                   ▼                                   ▼                   ▼               ▼ │
+│    [Meeting Summary]   [Action Checklist]                 [Follow-up Composer]   [Ask Ghost AI]  [Export]│
+│    (Overview & Points) (Assignee & Dues)                  (Email, Markdown)      (Neural Q&A)    (MD,PDF)│
 │                                                                                                          │
 └──────────────────────────────────────────────────────────────────────────────────────────────────────────┘
       (No external network calls anywhere in this pipeline. 100% offline by design.)
@@ -61,40 +66,58 @@
 
 ---
 
-## ✨ Latest Updates & Key Features
+## ✨ Key Features & Capabilities
 
-### 🎙️ 1. Real-Time Live Speech Stream
-- Streams and displays a live scrolling speech preview box during recording using chunked on-device Whisper inference.
+### 💬 1. "Ask Ghost" Cross-Meeting AI Semantic Search & Q&A
+- Ask natural language questions across all encrypted meetings in your vault (e.g., *"What did we decide about the database schema?"* or *"Who is assigned to the API PR?"*).
+- Instantly synthesizes structured answers with exact meeting citations and jump links.
 
-### 🎯 2. Specialized Meeting Templates
-- Choose between **General Sync**, **1:1 Growth Sync**, **Tech Architecture**, **Sales Discovery**, and **Incident Postmortem** to tailor structured extraction.
+### 📤 2. Multi-Format Meeting Export Suite
+- **Markdown (`.md`):** Formatted for Obsidian, Notion, GitHub, and Roam.
+- **Print / PDF:** Clean, professional print stylesheet for instant PDF generation without interface clutter.
+- **Calendar (`.ics`):** One-click RFC 5545 export for action item reminders into Apple & Google Calendar.
+- **Copy to Clipboard & JSON:** Rich text copy and raw structured data exports.
 
-### 🔊 3. Audio-Synced Playback & Timestamp Scrubbing
-- Integrated audio playback bar with scrub control. Clicking any timestamp in the full transcript instantly jumps to that second in the audio recording.
+### 🔐 3. Portable AES-GCM Vault Backup & Restore (`.ghostvault`)
+- Encrypt your entire meeting archive and profile into a single `.ghostvault` backup file using **AES-GCM-256 with PBKDF2 (150,000 iterations)**.
+- Restore backups effortlessly on new browsers or devices with your PIN.
 
-### 📅 4. One-Click Calendar Export (`.ics`)
-- Export pending action items directly to Apple Calendar, Google Calendar, or Outlook with automated reminder alarms.
+### 🏷️ 4. Smart Category Filtering
+- Instant category filter pills on the dashboard:
+  - `All Records`
+  - `General Sync`
+  - `Tech Architecture`
+  - `1:1 Growth`
+  - `Sales & Client`
+  - `Incident Postmortem`
 
-### 📊 5. Cross-Meeting Global Tasks Hub
-- Unified "All Tasks" modal to search, filter by assignee, and check off commitments across all past meetings.
+### 🔒 5. Flexible Authentication & Session Auto-Logout
+- **Session Auto-Logout:** By default, authentication is isolated in browser `sessionStorage`. Closing the tab/window automatically locks the vault and wipes in-memory cryptographic keys.
+- **"Always Remember Me":** Optional 30-day encrypted token for trusted personal devices.
+- **Profile & Settings:** Update display names, avatar presets, and change Master PIN with real-time verification.
 
-### 🔒 6. Enterprise-Grade Security & Privacy Hardening
-- **AES-GCM-256 Web Crypto:** Client-side PBKDF2 key derivation and AES-GCM encryption for stored notes.
-- **Content Security Policy (CSP):** Prohibits unauthorized scripts, plugins, and remote network egress.
-- **Inactivity Auto-Lock:** Automatically locks and blurs the screen after 5 minutes of idle time.
-- **Noise Suppression Pre-Filter:** 80Hz Highpass + 7.5kHz Lowpass BiquadFilter chain for clear speech capture.
-- **Secure Buffer Disposal:** Explicit memory clearing upon recording completion.
-- **File Upload Safeguards:** 50MB client-side caps and RFC 5545 calendar value escaping.
+### 🎙️ 6. Real-Time Speech Stream & Voice Activity Detection (VAD)
+- Streaming live transcript preview box during recording.
+- Real-time RMS acoustic energy tracking to skip silent frames.
+- Real-time timestamped bookmarking (`Decision`, `Action Item`, `Key Insight`, `Blocker`) with shortcut `B`.
+
+### 🎨 7. Humanized Linear / Apple Monochromatic Aesthetic
+- WebGL Black Hole continuous trigonometric plasma noise shader.
+- Multi-layer GSAP & Lenis smooth parallax scrolling.
+- WebGL voice-reactive iridescent orb visualizer.
+
+### 📱 8. Progressive Web App (PWA) Offline Support
+- Installable on desktop and mobile with standalone manifest and `#18181b` theme configuration.
 
 ---
 
-## 📜 Development History & Change Logs
+## 📜 Development History & Engineering Logs
 
 Detailed engineering logs of every phase are maintained in the [`history/`](history/) folder:
 
 - [`history/01-initial-spec-and-architecture.md`](history/01-initial-spec-and-architecture.md) — Problem statement, platform selection & architecture.
 - [`history/02-scaffolding-and-core-pipeline.md`](history/02-scaffolding-and-core-pipeline.md) — Vite + React 19 scaffolding, audio engine, Whisper WebGPU & Vitest suite.
-- [`history/03-monochromatic-white-redesign.md`](history/03-monochromatic-white-redesign.md) — Complete minimalist monochromatic white & zinc aesthetic redesign.
+- [`history/03-monochromatic-white-redesign.md`](history/03-monochromatic-white-redesign.md) — Minimalist monochromatic white & zinc aesthetic redesign.
 - [`history/04-power-features-release.md`](history/04-power-features-release.md) — Live speech streaming, meeting templates, audio sync, and `.ics` export.
 - [`history/05-security-hardening-and-vulnerability-fixes.md`](history/05-security-hardening-and-vulnerability-fixes.md) — AES-GCM crypto, CSP, auto-lock, buffer disposal, and global tasks rollup.
 - [`history/06-full-encryption-and-runtime-hardening.md`](history/06-full-encryption-and-runtime-hardening.md) — Direct IndexedDB vault encryption, PIN-protected lock, streaming mutex & track unload teardown.
@@ -107,19 +130,28 @@ Detailed engineering logs of every phase are maintained in the [`history/`](hist
 - [`history/13-storage-quota-monitoring-and-resilience.md`](history/13-storage-quota-monitoring-and-resilience.md) — Browser storage quota estimator, disk usage telemetry, and IndexedDB resilience.
 - [`history/14-pwa-milestones-and-search-highlighting.md`](history/14-pwa-milestones-and-search-highlighting.md) — PWA desktop manifest, live meeting milestone bookmarks, and interactive transcript search highlighting.
 - [`history/15-webgl-voice-reactive-orb.md`](history/15-webgl-voice-reactive-orb.md) — WebGL OGL voice reactive iridescent orb shader and real-time visualizer mode switcher.
+- [`history/16-black-hole-continuous-plasma-shader.md`](history/16-black-hole-continuous-plasma-shader.md) — Continuous trigonometric plasma noise shader eliminating square tile artifacts.
+- [`history/17-gsap-lenis-smooth-parallax.md`](history/17-gsap-lenis-smooth-parallax.md) — GSAP ScrollTrigger multi-layer parallax scrolling with Lenis smooth momentum.
+- [`history/18-humanized-ui-and-floating-elements-cleanup.md`](history/18-humanized-ui-and-floating-elements-cleanup.md) — Removal of robotic floating pill badges and humanized UI layout polish.
+- [`history/19-profile-and-account-settings.md`](history/19-profile-and-account-settings.md) — Account profile settings modal, display name customization, and Master PIN updater.
+- [`history/20-custom-ai-logo-branding.md`](history/20-custom-ai-logo-branding.md) — Custom AI acoustic glowing ghost branding integration across all views.
+- [`history/21-remember-me-session-autologout-and-tech-improvements.md`](history/21-remember-me-session-autologout-and-tech-improvements.md) — Always Remember Me toggle with session-only auto-logout security and architectural roadmap.
+- [`history/22-export-suite-encrypted-backups-and-vad.md`](history/22-export-suite-encrypted-backups-and-vad.md) — Multi-format export modal (MD, PDF, ICS, JSON), `.ghostvault` backup/restore, and RMS VAD.
+- [`history/23-ask-ghost-ai-category-filters-and-pwa.md`](history/23-ask-ghost-ai-category-filters-and-pwa.md) — Ask Ghost cross-meeting neural search, category filter pills, and standalone PWA manifest.
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Frontend:** [React 19](https://react.dev/), [TypeScript](https://www.typescriptlang.org/), [Vite 6](https://vitejs.dev/)
+- **Frontend:** [React 19](https://react.dev/), [TypeScript 5.7](https://www.typescriptlang.org/), [Vite 6.4](https://vitejs.dev/)
 - **Styling:** [Tailwind CSS v4](https://tailwindcss.com/)
+- **Animations & Graphics:** [GSAP 3](https://gsap.com/), [@studio-freight/lenis](https://github.com/darkroomengineering/lenis), [OGL (WebGL)](https://github.com/oframe/ogl)
 - **Icons:** [Lucide React](https://lucide.dev/)
 - **Speech-to-Text (ASR):** [@huggingface/transformers](https://huggingface.co/docs/transformers.js) (Whisper ONNX via WebGPU / WASM)
-- **Language Model:** On-device WebLLM / Rule-augmented Schema Parser
-- **Cryptography:** Native Web Crypto API (`SubtleCrypto` AES-GCM-256)
+- **Language Intelligence:** On-device WebLLM / Rule-augmented Schema Parser / Ask Ghost Neural Search
+- **Cryptography:** Native Web Crypto API (`SubtleCrypto` AES-GCM-256 + PBKDF2 SHA-256)
 - **Storage:** [idb](https://github.com/jakearchibald/idb) (IndexedDB wrapper)
-- **Testing:** [Vitest](https://vitest.dev/)
+- **Testing:** [Vitest 3.2](https://vitest.dev/) (28 unit & integration tests)
 
 ---
 
@@ -144,7 +176,7 @@ Open **`http://localhost:5173`** in your browser.
 ### Run Automated Tests
 
 ```bash
-npm test
+npx vitest run
 ```
 
 ### Production Build
@@ -158,7 +190,7 @@ npm run preview
 
 ## 🛡️ Privacy & Compliance Guarantee
 
-Meeting Ghost contains **zero code paths** for transmitting audio blobs, transcripts, or summaries to remote servers. All computation executes locally inside your browser's Web Worker and WebGPU contexts.
+Meeting Ghost contains **zero code paths** for transmitting audio blobs, transcripts, or meeting summaries to remote servers. All computation executes 100% locally inside your browser's Web Worker and WebGPU execution contexts.
 
 ---
 
