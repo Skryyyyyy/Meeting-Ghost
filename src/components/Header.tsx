@@ -1,8 +1,9 @@
 import React from 'react';
-import { ShieldCheck, Settings, Cpu, Mic, CheckSquare, Lock, Home } from 'lucide-react';
+import { ShieldCheck, Settings, Cpu, Mic, CheckSquare, Lock, Home, User } from 'lucide-react';
 
 interface HeaderProps {
   onOpenSettings: () => void;
+  onOpenProfile: () => void;
   onNewRecording: () => void;
   onOpenGlobalTasks: () => void;
   onLockScreen: () => void;
@@ -13,6 +14,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({
   onOpenSettings,
+  onOpenProfile,
   onNewRecording,
   onOpenGlobalTasks,
   onLockScreen,
@@ -82,6 +84,15 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Lock className="w-4 h-4 text-zinc-900" />
             <span className="hidden sm:inline">Lock Vault</span>
+          </button>
+
+          <button
+            onClick={onOpenProfile}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-semibold transition-colors cursor-pointer"
+            title={`Account Profile: ${userName}`}
+          >
+            <User className="w-3.5 h-3.5 text-zinc-900" />
+            <span className="max-w-[100px] truncate">{userName}</span>
           </button>
 
           <button

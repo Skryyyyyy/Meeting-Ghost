@@ -139,6 +139,70 @@ export async function resetMasterPin(newPin: string): Promise<void> {
 }
 
 /**
+ * Update User Profile (Username / Display Name, Email, Photo URL)
+ */
+export async function updateUserProfile(updates: {
+  displayName?: string;
+  email?: string;
+  photoURL?: string;
+}): Promise<UserProfile> {
+  const current = getCurrentUser();
+  const sanitizedName = updates.displayName
+    ? sanitizeAndCheckSql(updates.displayName).sanitizedValue || 'Vault Owner'
+    : current?.displayName || 'Vault Owner';
+
+  const updatedUser: UserProfile = {
+    uid: current?.uid || `local-${Date.now()}`,
+    email: updates.email !== undefined ? updates.email : current?.email || 'local@meetingghost.app',
+    displayName: sanitizedName,
+    photoURL: updates.photoURL !== undefined ? updates.photoURL : current?.photoURL,
+    authProvider: current?.authProvider || 'local',
+    createdAt: current?.createdAt || Date.now(),
+  };
+
+  localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(updatedUser));
+
+  // Also sync username in VaultProfile if present
+  const vaultRaw = localStorage.getItem(VAULT_PROFILE_KEY);
+  if (vaultRaw) {
+    try {
+      const vault = JSON.parse(vaultRaw) as VaultProfile;
+      vault.username = sanitizedName;
+      if (updates.email) vault.email = updates.email;
+      localStorage.setItem(VAULT_PROFILE_KEY, JSON.stringify(vault));
+    } catch (e) {
+      console.warn('Could not update vault profile:', e);
+    }
+  }
+
+  return updatedUser;
+}
+
+/**
+ * Change / Update Master PIN or Password with current verification
+ */
+export async function updateMasterPin(
+  currentPin: string,
+  newPin: string
+): Promise<{ success: boolean; error?: string }> {
+  if (newPin.length < 4) {
+    return { success: false, error: 'New Master PIN must be at least 4 digits.' };
+  }
+
+  // Verify current PIN first if vault is setup
+  if (isVaultSetup()) {
+    const verify = await verifyVaultPin(currentPin);
+    if (!verify.success) {
+      return { success: false, error: 'Current Master PIN is incorrect.' };
+    }
+  }
+
+  const user = getCurrentUser();
+  await setupVault(user?.displayName || 'Vault Owner', newPin, user?.email);
+  return { success: true };
+}
+
+/**
  * Google Sign In with Firebase Auth
  */
 export async function signInWithGoogle(masterPin: string = '0000'): Promise<UserProfile> {

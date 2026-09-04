@@ -11,6 +11,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { PrivacySettingsModal } from './components/PrivacySettingsModal';
 import { GlobalTasksModal } from './components/GlobalTasksModal';
 import { CommandPalette } from './components/CommandPalette';
+import { ProfileModal } from './components/ProfileModal';
 import { InactivityLock } from './components/InactivityLock';
 import { CookieBanner } from './components/CookieBanner';
 import { MeetingData, MeetingTemplate, ProcessingStage, TranscriptionLanguage, MeetingBookmark } from './types/meeting';
@@ -44,6 +45,7 @@ export function App() {
   const [processingStatus, setProcessingStatus] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isGlobalTasksOpen, setIsGlobalTasksOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
@@ -427,6 +429,7 @@ export function App() {
     <div className="min-h-screen bg-white text-zinc-900 flex flex-col">
       <Header
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenProfile={() => setIsProfileModalOpen(true)}
         onNewRecording={handleStartRecording}
         onOpenGlobalTasks={() => setIsGlobalTasksOpen(true)}
         onLockScreen={handleLockVault}
@@ -486,6 +489,13 @@ export function App() {
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenPrivacyModal={() => setIsPrivacyModalOpen(true)}
         onOpenGlobalTasks={() => setIsGlobalTasksOpen(true)}
+        onOpenProfile={() => setIsProfileModalOpen(true)}
+      />
+
+      {/* Profile & Account Settings Modal */}
+      <ProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
       />
 
       {/* Global Commitments Rollup Modal */}

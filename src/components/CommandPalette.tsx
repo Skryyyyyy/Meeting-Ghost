@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Mic, FileText, Settings, Shield, ListTodo, X, ArrowRight } from 'lucide-react';
+import { Search, Mic, FileText, Settings, Shield, ListTodo, X, ArrowRight, User } from 'lucide-react';
 import { MeetingData } from '../types/meeting';
 
 interface CommandPaletteProps {
@@ -11,6 +11,7 @@ interface CommandPaletteProps {
   onOpenSettings: () => void;
   onOpenPrivacyModal: () => void;
   onOpenGlobalTasks: () => void;
+  onOpenProfile: () => void;
 }
 
 export const CommandPalette: React.FC<CommandPaletteProps> = ({
@@ -22,6 +23,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   onOpenSettings,
   onOpenPrivacyModal,
   onOpenGlobalTasks,
+  onOpenProfile,
 }) => {
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -131,6 +133,22 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                     <Shield className="w-3.5 h-3.5" />
                   </div>
                   <span>Privacy & Security Vault Center</span>
+                </div>
+                <ArrowRight className="w-3.5 h-3.5 text-zinc-400" />
+              </button>
+
+              <button
+                onClick={() => {
+                  onOpenProfile();
+                  onClose();
+                }}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-zinc-100 text-left text-zinc-900 font-semibold transition-colors cursor-pointer"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="p-1.5 rounded-lg bg-zinc-100 text-zinc-900 border border-zinc-200">
+                    <User className="w-3.5 h-3.5" />
+                  </div>
+                  <span>Account Profile & Master PIN</span>
                 </div>
                 <ArrowRight className="w-3.5 h-3.5 text-zinc-400" />
               </button>
