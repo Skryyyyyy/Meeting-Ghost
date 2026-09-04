@@ -87,6 +87,28 @@ export class AudioRecorder {
     }
   }
 
+  /**
+   * Calculates real-time Root Mean Square (RMS) energy level (0.0 to 1.0)
+   */
+  getRMSLevel(): number {
+    if (!this.analyser) return 0;
+    const buffer = new Uint8Array(this.analyser.fftSize);
+    this.analyser.getByteTimeDomainData(buffer as any);
+    let sum = 0;
+    for (let i = 0; i < buffer.length; i++) {
+      const normalized = (buffer[i] - 128) / 128;
+      sum += normalized * normalized;
+    }
+    return Math.sqrt(sum / buffer.length);
+  }
+
+  /**
+   * Voice Activity Detection (VAD) heuristic: returns true when human speech energy is detected
+   */
+  isSpeaking(threshold: number = 0.035): boolean {
+    return this.getRMSLevel() > threshold;
+  }
+
   async stop(): Promise<Blob> {
     return new Promise((resolve) => {
       if (!this.mediaRecorder) {

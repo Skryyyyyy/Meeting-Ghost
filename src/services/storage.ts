@@ -172,6 +172,13 @@ export async function syncFromBackendCloud(): Promise<number> {
   }
 }
 
+export async function clearAllMeetings(): Promise<void> {
+  const localDb = await getDB();
+  await localDb.clear('meetings');
+}
+
+export const getAllMeetings = getMeetings;
+
 export async function getStorageQuotaInfo(): Promise<{ usageMB: number; quotaMB: number; percent: number }> {
   if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.estimate) {
     try {

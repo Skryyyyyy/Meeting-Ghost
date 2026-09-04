@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   User,
@@ -8,6 +8,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Lock,
+  Download,
+  Upload,
 } from 'lucide-react';
 import {
   getCurrentUser,
@@ -15,6 +17,10 @@ import {
   updateMasterPin,
   UserProfile,
 } from '../services/auth';
+import {
+  createEncryptedVaultBackup,
+  restoreEncryptedVaultBackup,
+} from '../services/vaultBackup';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -46,6 +52,11 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   const [currentPin, setCurrentPin] = useState('');
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
+
+  // Backup & Restore State
+  const [backupPin, setBackupPin] = useState('');
+  const [restorePin, setRestorePin] = useState('');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -120,6 +131,66 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
       }
     } catch (err: any) {
       setFeedbackMsg({ type: 'error', text: err.message || 'Error changing PIN.' });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleExportBackup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!backupPin || backupPin.length < 4) {
+      setFeedbackMsg({ type: 'error', text: 'Please enter a PIN (min 4 digits) to encrypt your backup.' });
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const blob = await createEncryptedVaultBackup(backupPin);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `meeting-ghost-backup-${new Date().toISOString().split('T')[0]}.ghostvault`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setFeedbackMsg({ type: 'success', text: 'Encrypted backup downloaded successfully!' });
+      setBackupPin('');
+    } catch (err: any) {
+      setFeedbackMsg({ type: 'error', text: 'Failed to create backup: ' + err.message });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleRestoreFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!restorePin) {
+      setFeedbackMsg({ type: 'error', text: 'Please enter the backup PIN first before selecting the file.' });
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const res = await restoreEncryptedVaultBackup(file, restorePin);
+      if (res.success) {
+        setFeedbackMsg({
+          type: 'success',
+          text: `Successfully restored ${res.restoredCount} meetings from backup! Refreshing...`,
+        });
+        setRestorePin('');
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        setFeedbackMsg({ type: 'error', text: res.error || 'Failed to restore backup.' });
+      }
+    } catch (err: any) {
+      setFeedbackMsg({ type: 'error', text: 'Restore error: ' + err.message });
     } finally {
       setIsProcessing(false);
     }
@@ -376,9 +447,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             </form>
           )}
 
-          {/* TAB 3: Vault Encryption */}
+          {/* TAB 3: Vault Encryption & Backups */}
           {activeTab === 'vault' && (
-            <div className="space-y-4 text-xs">
+            <div className="space-y-5 text-xs">
               <div className="p-4 bg-zinc-50 rounded-2xl border border-zinc-200 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-zinc-900">Cipher Specification</span>
@@ -397,6 +468,74 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 <div className="flex items-center justify-between">
                   <span className="text-zinc-600">Storage Layer</span>
                   <span className="font-mono text-zinc-900">IndexedDB Encrypted Sandbox</span>
+                </div>
+              </div>
+
+              {/* Export Backup Card */}
+              <div className="p-4 bg-white rounded-2xl border border-zinc-200 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Download className="w-4 h-4 text-zinc-900" />
+                  <h4 className="font-bold text-zinc-900">Export Encrypted Backup (.ghostvault)</h4>
+                </div>
+                <p className="text-[11px] text-zinc-500">
+                  Export all encrypted meetings and account profiles into a password-protected portable file.
+                </p>
+                <form onSubmit={handleExportBackup} className="flex gap-2">
+                  <input
+                    type="password"
+                    placeholder="Enter backup encryption PIN"
+                    value={backupPin}
+                    onChange={(e) => setBackupPin(e.target.value)}
+                    className="flex-1 bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-xs text-zinc-900 focus:outline-none focus:border-zinc-900 font-mono tracking-widest"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isProcessing}
+                    className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 disabled:bg-zinc-400 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shrink-0"
+                  >
+                    Export
+                  </button>
+                </form>
+              </div>
+
+              {/* Restore Backup Card */}
+              <div className="p-4 bg-white rounded-2xl border border-zinc-200 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Upload className="w-4 h-4 text-zinc-900" />
+                  <h4 className="font-bold text-zinc-900">Restore Encrypted Backup</h4>
+                </div>
+                <p className="text-[11px] text-zinc-500">
+                  Import a previously exported <code className="font-mono bg-zinc-100 px-1 py-0.5 rounded">.ghostvault</code> file to recover your meetings.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="password"
+                    placeholder="Enter backup PIN"
+                    value={restorePin}
+                    onChange={(e) => setRestorePin(e.target.value)}
+                    className="flex-1 bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 text-xs text-zinc-900 focus:outline-none focus:border-zinc-900 font-mono tracking-widest"
+                  />
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept=".ghostvault,.json"
+                    onChange={handleRestoreFileSelected}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!restorePin) {
+                        setFeedbackMsg({ type: 'error', text: 'Please enter the backup PIN first.' });
+                        return;
+                      }
+                      fileInputRef.current?.click();
+                    }}
+                    disabled={isProcessing}
+                    className="px-4 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-900 border border-zinc-300 font-bold text-xs rounded-xl transition-all cursor-pointer shrink-0"
+                  >
+                    Select File & Restore
+                  </button>
                 </div>
               </div>
 

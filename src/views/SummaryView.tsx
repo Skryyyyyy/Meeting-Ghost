@@ -1,10 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Clock, Calendar, ShieldCheck, CheckCircle, ListChecks, FileText, Share2, Edit3, Check, Play, Pause } from 'lucide-react';
+import {
+  ArrowLeft,
+  Clock,
+  Calendar,
+  ShieldCheck,
+  CheckCircle,
+  ListChecks,
+  FileText,
+  Share2,
+  Edit3,
+  Check,
+  Play,
+  Pause,
+  FileDown,
+} from 'lucide-react';
 import { MeetingData, ActionItem } from '../types/meeting';
 import { ActionItemsList } from '../components/ActionItemsList';
 import { FollowUpComposer } from '../components/FollowUpComposer';
 import { TranscriptViewer } from '../components/TranscriptViewer';
 import { WaveformScrubber } from '../components/WaveformScrubber';
+import { ExportModal } from '../components/ExportModal';
 
 interface SummaryViewProps {
   meeting: MeetingData;
@@ -18,6 +33,7 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
   onUpdateMeeting,
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
   const [title, setTitle] = useState(meeting.title);
   const [activeTab, setActiveTab] = useState<'summary' | 'actions' | 'followup'>('summary');
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -101,9 +117,17 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
         </button>
 
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-zinc-100 text-zinc-800 border border-zinc-200 shadow-xs">
+          <button
+            onClick={() => setIsExportOpen(true)}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-zinc-900 hover:bg-zinc-800 px-3.5 py-2 rounded-xl transition-colors shadow-xs cursor-pointer"
+          >
+            <FileDown className="w-4 h-4" />
+            Export Notes
+          </button>
+
+          <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-zinc-100 text-zinc-800 border border-zinc-200 shadow-xs">
             <ShieldCheck className="w-3.5 h-3.5 text-zinc-900" />
-            100% On-Device Verified
+            100% On-Device
           </span>
         </div>
       </div>
@@ -354,6 +378,13 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
           onSeekAudio={handleSeekAudio}
         />
       </div>
+
+      {/* Export Options Modal */}
+      <ExportModal
+        isOpen={isExportOpen}
+        onClose={() => setIsExportOpen(false)}
+        meeting={meeting}
+      />
     </div>
   );
 };
