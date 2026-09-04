@@ -23,6 +23,7 @@ import {
   lockVault,
   getVaultUsername,
   verifyVaultPin,
+  getCurrentUser,
 } from './services/auth';
 import {
   getMeetings,
@@ -113,12 +114,18 @@ export function App() {
     window.addEventListener('beforeunload', handleUnload);
     window.addEventListener('pagehide', handleUnload);
 
-    // Sync Firebase session revocation to vault lifecycle
+    // Sync Firebase session revocation to vault lifecycle (only for cloud-synced accounts)
     let unsubscribeAuth: (() => void) | null = null;
     if (auth) {
       unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-        if (!user && page === 'app') {
-          // If remote session was revoked, secure the local session
+        const currentUser = getCurrentUser();
+        if (
+          !user &&
+          page === 'app' &&
+          currentUser &&
+          (currentUser.authProvider === 'google' || currentUser.authProvider === 'email')
+        ) {
+          // If remote Firebase session was revoked for cloud account, secure the session
           handleLockVault();
         }
       });
