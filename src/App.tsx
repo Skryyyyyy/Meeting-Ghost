@@ -93,16 +93,18 @@ export function App() {
     window.addEventListener('keydown', handleActivity);
     resetInactivityTimer();
 
-    // Clean up media tracks on tab unload/close
-    const handleBeforeUnload = () => {
-      recorderRef.current.stop();
+    // Clean up media tracks on tab unload/close synchronously
+    const handleUnload = () => {
+      recorderRef.current.stopSynchronously();
     };
-    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('beforeunload', handleUnload);
+    window.addEventListener('pagehide', handleUnload);
 
     return () => {
       window.removeEventListener('mousemove', handleActivity);
       window.removeEventListener('keydown', handleActivity);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('beforeunload', handleUnload);
+      window.removeEventListener('pagehide', handleUnload);
       if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
       if (streamingIntervalRef.current) clearInterval(streamingIntervalRef.current);
     };
@@ -128,6 +130,8 @@ export function App() {
 
   const handleLockVault = () => {
     lockVault();
+    setMeetings([]);
+    setActiveMeeting(null);
     setIsLocked(false);
     setPage('landing');
   };

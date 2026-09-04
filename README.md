@@ -102,6 +102,7 @@ Detailed engineering logs of every phase are maintained in the [`history/`](hist
 - [`history/08-firebase-google-auth-and-privacy-center.md`](history/08-firebase-google-auth-and-privacy-center.md) — Firebase Google & Email auth, SQLi defense, Master PIN reset, cookie preferences, and GDPR data export/purge.
 - [`history/09-firebase-credentials-and-csp-configuration.md`](history/09-firebase-credentials-and-csp-configuration.md) — Live Firebase configuration, Google OAuth integration, and CSP whitelisting.
 - [`history/10-backend-firestore-sync-and-security-rules.md`](history/10-backend-firestore-sync-and-security-rules.md) — Firestore backend integration, zero-knowledge cloud backup, production security rules, and secrets isolation.
+- [`history/11-in-memory-cryptokey-and-anti-prompt-injection.md`](history/11-in-memory-cryptokey-and-anti-prompt-injection.md) — In-memory CryptoKey management, spoken prompt injection shielding, and synchronous teardown.
 
 ---
 

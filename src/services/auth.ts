@@ -9,10 +9,10 @@ import {
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  sendPasswordResetEmail,
   signOut,
 } from './firebase';
 import { sanitizeAndCheckSql } from './security';
+import { deriveKeyFromPassphrase, setActiveCryptoKey, clearActiveCryptoKey } from './crypto';
 
 export interface UserProfile {
   uid: string;
@@ -34,7 +34,10 @@ export interface VaultProfile {
 const VAULT_PROFILE_KEY = 'ghost_vault_profile';
 const USER_PROFILE_KEY = 'ghost_user_profile';
 const SESSION_AUTH_KEY = 'ghost_vault_unlocked';
-const FAILED_ATTEMPTS_KEY = 'ghost_failed_attempts';
+
+// In-memory rate limiting defense (resists client-side localStorage tampering)
+let memoryFailedAttempts = 0;
+let memoryLockoutUntil = 0;
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 30 * 1000;
 
@@ -115,10 +118,13 @@ export async function setupVault(username: string, pin: string, email?: string):
     createdAt: Date.now(),
   };
 
+  // Derive and activate in-memory CryptoKey (never store plaintext PIN on disk)
+  const activeKey = await deriveKeyFromPassphrase(pin, salt);
+  setActiveCryptoKey(activeKey);
+
   localStorage.setItem(VAULT_PROFILE_KEY, JSON.stringify(profile));
   localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(user));
   sessionStorage.setItem(SESSION_AUTH_KEY, 'true');
-  sessionStorage.setItem('ghost_vault_key', pin);
   resetFailedAttempts();
 }
 
@@ -137,7 +143,6 @@ export async function resetMasterPin(newPin: string): Promise<void> {
  */
 export async function signInWithGoogle(masterPin: string = '0000'): Promise<UserProfile> {
   if (!auth) {
-    // Fallback simulation for offline / testing environments
     const mockGoogleUser: UserProfile = {
       uid: 'google-demo-user-101',
       email: 'alex.director@example.com',
@@ -167,7 +172,6 @@ export async function signInWithGoogle(masterPin: string = '0000'): Promise<User
     localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(user));
     return user;
   } catch (err: any) {
-    // Graceful offline fallback
     console.warn('Firebase popup unavailable, using local authenticated session:', err);
     const fallbackUser: UserProfile = {
       uid: `g-fallback-${Date.now()}`,
@@ -214,7 +218,6 @@ export async function registerWithEmail(
     }
   }
 
-  // Local secure vault registration
   const localUser: UserProfile = {
     uid: `usr-${Date.now()}`,
     email,
@@ -269,21 +272,8 @@ export async function loginWithEmail(email: string, pass: string, pin: string): 
   return existing;
 }
 
-/**
- * Request Password Reset Email via Firebase
- */
-export async function sendResetPassword(email: string): Promise<void> {
-  const sqlCheck = sanitizeAndCheckSql(email);
-  if (!sqlCheck.isSafe) {
-    throw new Error('Invalid email format or malicious tokens detected.');
-  }
-  if (auth) {
-    await sendPasswordResetEmail(auth, email);
-  }
-}
-
 export async function verifyVaultPin(enteredPin: string): Promise<{ success: boolean; error?: string }> {
-  // Check lockout
+  // Check lockout (memory + storage hybrid rate limiting)
   const lockoutStatus = checkLockout();
   if (lockoutStatus.locked) {
     return {
@@ -294,10 +284,10 @@ export async function verifyVaultPin(enteredPin: string): Promise<{ success: boo
 
   const rawProfile = localStorage.getItem(VAULT_PROFILE_KEY);
   if (!rawProfile) {
-    // Default demo PIN '0000' allows entry
     if (enteredPin === '0000') {
+      const key = await deriveKeyFromPassphrase('0000', new Uint8Array(16));
+      setActiveCryptoKey(key);
       sessionStorage.setItem(SESSION_AUTH_KEY, 'true');
-      sessionStorage.setItem('ghost_vault_key', '0000');
       return { success: true };
     }
     return { success: false, error: 'Vault not initialized. Enter 0000 or set up your vault.' };
@@ -313,8 +303,9 @@ export async function verifyVaultPin(enteredPin: string): Promise<{ success: boo
 
     const computedHash = await hashPin(enteredPin, salt);
     if (computedHash === profile.pinHash) {
+      const key = await deriveKeyFromPassphrase(enteredPin, salt);
+      setActiveCryptoKey(key);
       sessionStorage.setItem(SESSION_AUTH_KEY, 'true');
-      sessionStorage.setItem('ghost_vault_key', enteredPin);
       resetFailedAttempts();
       return { success: true };
     }
@@ -334,9 +325,9 @@ export async function verifyVaultPin(enteredPin: string): Promise<{ success: boo
 }
 
 export function lockVault(): void {
+  clearActiveCryptoKey();
   if (typeof sessionStorage !== 'undefined') {
     sessionStorage.removeItem(SESSION_AUTH_KEY);
-    sessionStorage.removeItem('ghost_vault_key');
   }
   if (auth) {
     signOut(auth).catch(() => {});
@@ -357,43 +348,27 @@ export function getVaultUsername(): string {
 }
 
 function recordFailedAttempt(): void {
-  const current = getFailedAttempts() + 1;
-  const data = {
-    count: current,
-    lastFail: Date.now(),
-  };
-  localStorage.setItem(FAILED_ATTEMPTS_KEY, JSON.stringify(data));
-}
-
-function resetFailedAttempts(): void {
-  localStorage.removeItem(FAILED_ATTEMPTS_KEY);
-}
-
-function getFailedAttempts(): number {
-  const raw = localStorage.getItem(FAILED_ATTEMPTS_KEY);
-  if (!raw) return 0;
-  try {
-    return JSON.parse(raw).count || 0;
-  } catch {
-    return 0;
+  memoryFailedAttempts += 1;
+  if (memoryFailedAttempts >= MAX_ATTEMPTS) {
+    memoryLockoutUntil = Date.now() + LOCKOUT_DURATION_MS;
   }
 }
 
+function resetFailedAttempts(): void {
+  memoryFailedAttempts = 0;
+  memoryLockoutUntil = 0;
+}
+
+function getFailedAttempts(): number {
+  return memoryFailedAttempts;
+}
+
 function checkLockout(): { locked: boolean; remainingSecs: number } {
-  const raw = localStorage.getItem(FAILED_ATTEMPTS_KEY);
-  if (!raw) return { locked: false, remainingSecs: 0 };
-  try {
-    const data = JSON.parse(raw);
-    if (data.count >= MAX_ATTEMPTS) {
-      const elapsed = Date.now() - (data.lastFail || 0);
-      if (elapsed < LOCKOUT_DURATION_MS) {
-        const remainingSecs = Math.ceil((LOCKOUT_DURATION_MS - elapsed) / 1000);
-        return { locked: true, remainingSecs };
-      } else {
-        resetFailedAttempts();
-      }
-    }
-  } catch {
+  if (memoryLockoutUntil > Date.now()) {
+    const remainingSecs = Math.ceil((memoryLockoutUntil - Date.now()) / 1000);
+    return { locked: true, remainingSecs };
+  }
+  if (memoryLockoutUntil !== 0 && memoryLockoutUntil <= Date.now()) {
     resetFailedAttempts();
   }
   return { locked: false, remainingSecs: 0 };

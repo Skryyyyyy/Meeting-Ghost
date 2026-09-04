@@ -1,10 +1,25 @@
 /**
  * Web Crypto API AES-GCM-256 Encryption & Decryption Service
- * Secures meeting notes and transcripts stored in IndexedDB.
+ * Secures meeting notes and transcripts stored in IndexedDB and Firestore.
  */
 
 const SALT_SIZE = 16;
 const IV_SIZE = 12;
+
+// In-memory active CryptoKey cache (never written to disk or sessionStorage)
+let activeVaultCryptoKey: CryptoKey | null = null;
+
+export function setActiveCryptoKey(key: CryptoKey | null): void {
+  activeVaultCryptoKey = key;
+}
+
+export function getActiveCryptoKey(): CryptoKey | null {
+  return activeVaultCryptoKey;
+}
+
+export function clearActiveCryptoKey(): void {
+  activeVaultCryptoKey = null;
+}
 
 export async function deriveKeyFromPassphrase(passphrase: string, salt: Uint8Array): Promise<CryptoKey> {
   const enc = new TextEncoder();
@@ -30,15 +45,26 @@ export async function deriveKeyFromPassphrase(passphrase: string, salt: Uint8Arr
   );
 }
 
-export async function encryptData(plainText: string, passphrase?: string): Promise<string> {
-  if (!passphrase) {
-    // Default fallback to base64 encoding if no custom passphrase is set
-    return btoa(unescape(encodeURIComponent(plainText)));
-  }
-
+export async function encryptData(plainText: string, passphraseOrKey?: string | CryptoKey): Promise<string> {
+  let key: CryptoKey;
   const salt = crypto.getRandomValues(new Uint8Array(SALT_SIZE));
   const iv = crypto.getRandomValues(new Uint8Array(IV_SIZE));
-  const key = await deriveKeyFromPassphrase(passphrase, salt);
+
+  if (passphraseOrKey instanceof CryptoKey) {
+    key = passphraseOrKey;
+  } else if (typeof passphraseOrKey === 'string' && passphraseOrKey.trim().length > 0) {
+    key = await deriveKeyFromPassphrase(passphraseOrKey, salt);
+  } else if (activeVaultCryptoKey) {
+    key = activeVaultCryptoKey;
+  } else {
+    // Generate a secure ephemeral session key if none provided (never static fallback)
+    key = await crypto.subtle.generateKey(
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['encrypt', 'decrypt']
+    );
+    activeVaultCryptoKey = key;
+  }
 
   const enc = new TextEncoder();
   const encryptedBuffer = await crypto.subtle.encrypt(
@@ -47,7 +73,7 @@ export async function encryptData(plainText: string, passphrase?: string): Promi
     enc.encode(plainText)
   );
 
-  // Combine salt + iv + ciphertext into a single base64 string
+  // Combine salt + iv + ciphertext into a single base64 payload
   const combined = new Uint8Array(salt.length + iv.length + encryptedBuffer.byteLength);
   combined.set(salt, 0);
   combined.set(iv, salt.length);
@@ -60,17 +86,13 @@ export async function encryptData(plainText: string, passphrase?: string): Promi
   return 'ENC:' + btoa(binary);
 }
 
-export async function decryptData(encryptedStr: string, passphrase?: string): Promise<string> {
+export async function decryptData(encryptedStr: string, passphraseOrKey?: string | CryptoKey): Promise<string> {
   if (!encryptedStr.startsWith('ENC:')) {
     try {
       return decodeURIComponent(escape(atob(encryptedStr)));
     } catch {
       return encryptedStr;
     }
-  }
-
-  if (!passphrase) {
-    throw new Error('Passphrase required to decrypt vault.');
   }
 
   const rawBase64 = encryptedStr.slice(4);
@@ -84,7 +106,16 @@ export async function decryptData(encryptedStr: string, passphrase?: string): Pr
   const iv = combined.slice(SALT_SIZE, SALT_SIZE + IV_SIZE);
   const cipherBytes = combined.slice(SALT_SIZE + IV_SIZE);
 
-  const key = await deriveKeyFromPassphrase(passphrase, salt);
+  let key: CryptoKey;
+  if (passphraseOrKey instanceof CryptoKey) {
+    key = passphraseOrKey;
+  } else if (typeof passphraseOrKey === 'string' && passphraseOrKey.trim().length > 0) {
+    key = await deriveKeyFromPassphrase(passphraseOrKey, salt);
+  } else if (activeVaultCryptoKey) {
+    key = activeVaultCryptoKey;
+  } else {
+    throw new Error('Vault is locked. Valid decryption key or Master PIN required.');
+  }
 
   const decryptedBuffer = await crypto.subtle.decrypt(
     { name: 'AES-GCM', iv: iv as any },

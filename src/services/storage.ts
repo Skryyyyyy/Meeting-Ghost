@@ -1,12 +1,12 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 import { MeetingData } from '../types/meeting';
-import { encryptData, decryptData } from './crypto';
+import { encryptData, decryptData, setActiveCryptoKey, clearActiveCryptoKey, deriveKeyFromPassphrase } from './crypto';
 import { db, auth, doc, setDoc, getDocs, deleteDoc, collection } from './firebase';
 
 interface StoredMeetingRecord {
   id: string;
   createdAt: number;
-  encryptedPayload: string; // Encrypted JSON string of MeetingData
+  encryptedPayload: string; // AES-GCM Encrypted JSON string of MeetingData
 }
 
 interface MeetingDB extends DBSchema {
@@ -21,19 +21,15 @@ const DB_NAME = 'meeting-ghost-db';
 const DB_VERSION = 2;
 
 let dbPromise: Promise<IDBPDatabase<MeetingDB>> | null = null;
-let currentVaultPassphrase: string = typeof sessionStorage !== 'undefined' 
-  ? (sessionStorage.getItem('ghost_vault_key') || 'GhostDefaultVaultKey2026!')
-  : 'GhostDefaultVaultKey2026!';
 
-export function setVaultPassphrase(pass: string): void {
-  currentVaultPassphrase = pass;
-  if (typeof sessionStorage !== 'undefined') {
-    sessionStorage.setItem('ghost_vault_key', pass);
-  }
+export async function setVaultPassphrase(pass: string): Promise<void> {
+  const salt = new Uint8Array(16); // Standard derivation salt
+  const key = await deriveKeyFromPassphrase(pass, salt);
+  setActiveCryptoKey(key);
 }
 
-export function getVaultPassphrase(): string {
-  return currentVaultPassphrase;
+export function clearVaultSession(): void {
+  clearActiveCryptoKey();
 }
 
 function getDB() {
@@ -54,7 +50,7 @@ function getDB() {
 export async function saveMeeting(meeting: MeetingData): Promise<void> {
   const localDb = await getDB();
   const serialized = JSON.stringify(meeting);
-  const encryptedPayload = await encryptData(serialized, currentVaultPassphrase);
+  const encryptedPayload = await encryptData(serialized);
 
   const record: StoredMeetingRecord = {
     id: meeting.id,
@@ -78,7 +74,6 @@ export async function saveMeeting(meeting: MeetingData): Promise<void> {
       });
     }
   } catch (err) {
-    // Non-critical background sync fallback (offline first)
     console.warn('Backend sync deferred (offline or permission required):', err);
   }
 }
@@ -90,7 +85,7 @@ export async function getMeetings(): Promise<MeetingData[]> {
   const decryptedMeetings: MeetingData[] = [];
   for (const record of allRecords) {
     try {
-      const decryptedJson = await decryptData(record.encryptedPayload, currentVaultPassphrase);
+      const decryptedJson = await decryptData(record.encryptedPayload);
       const meeting: MeetingData = JSON.parse(decryptedJson);
       decryptedMeetings.push(meeting);
     } catch (err) {
@@ -107,7 +102,7 @@ export async function getMeetingById(id: string): Promise<MeetingData | undefine
   if (!record) return undefined;
 
   try {
-    const decryptedJson = await decryptData(record.encryptedPayload, currentVaultPassphrase);
+    const decryptedJson = await decryptData(record.encryptedPayload);
     return JSON.parse(decryptedJson) as MeetingData;
   } catch (err) {
     console.error(`Decryption failed for meeting ${id}:`, err);

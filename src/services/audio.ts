@@ -126,6 +126,21 @@ export class AudioRecorder {
       }
     });
   }
+
+  stopSynchronously(): void {
+    if (this.mediaStream) {
+      this.mediaStream.getTracks().forEach((track) => track.stop());
+    }
+    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+      try { this.mediaRecorder.stop(); } catch {}
+    }
+    if (this.audioContext && this.audioContext.state !== 'closed') {
+      try { this.audioContext.close(); } catch {}
+    }
+    this.mediaStream = null;
+    this.mediaRecorder = null;
+    this.audioContext = null;
+  }
 }
 
 /**
