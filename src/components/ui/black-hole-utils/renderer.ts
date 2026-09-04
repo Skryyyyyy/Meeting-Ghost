@@ -47,102 +47,97 @@ export function createRenderer({ canvas }: RendererOptions): BlackHoleRenderer {
 
     #define PI 3.14159265359
 
-    float hash(vec2 p) {
-      p = fract(p * vec2(123.34, 456.21));
-      p += dot(p, p + 45.32);
-      return fract(p.x * p.y);
+    // Ultra-smooth trigonometric procedural plasma noise (zero pixel/block artifacts)
+    float smoothNoise(vec2 p) {
+      return sin(p.x) * cos(p.y) + sin(p.x * 0.5 + p.y * 1.5) * 0.5 + cos(p.x * 1.3 - p.y * 0.8) * 0.25;
     }
 
-    float noise(vec2 p) {
-      vec2 i = floor(p);
-      vec2 f = fract(p);
-      vec2 u = f * f * (3.0 - 2.0 * f);
-      return mix(
-        mix(hash(i + vec2(0.0, 0.0)), hash(i + vec2(1.0, 0.0)), u.x),
-        mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x),
-        u.y
-      );
-    }
-
-    float fbm(vec2 p) {
+    float smoothFBM(vec2 p) {
       float v = 0.0;
       float a = 0.5;
-      mat2 rot = mat2(cos(0.5), sin(0.5), -sin(0.5), cos(0.5));
+      mat2 rot = mat2(0.8, 0.6, -0.6, 0.8);
       for (int i = 0; i < 4; i++) {
-        v += a * noise(p);
-        p = rot * p * 2.0 + vec2(100.0);
+        v += a * smoothNoise(p);
+        p = rot * p * 2.1 + vec2(1.7, 9.2);
         a *= 0.5;
       }
-      return v;
+      return (v + 1.0) * 0.5;
     }
 
     void main() {
       vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution.xy) / min(u_resolution.x, u_resolution.y);
       
-      vec2 mouseOffset = (u_mouse - 0.5) * 0.35;
+      // Gentle floating camera drift
+      vec2 mouseOffset = (u_mouse - 0.5) * 0.2;
       vec2 center = vec2(0.0, 0.0) + mouseOffset;
       vec2 p = uv - center;
 
       float dist = length(p);
 
-      float rs = 0.18;
-      float photonSphere = rs * 1.5;
+      // Schwarzschild event horizon and photon sphere
+      float rs = 0.17;
+      float photonSphere = rs * 1.45;
 
+      // Smooth Gravitational Lensing Ray Deflection
       float deflection = 0.0;
       if (dist > 0.001) {
-        deflection = (rs * 1.35) / (dist + 0.06);
+        deflection = (rs * 1.25) / (dist + 0.05);
       }
 
-      vec2 deflectedP = p * (1.0 - deflection * 0.45);
+      vec2 deflectedP = p * (1.0 - deflection * 0.4);
 
-      vec2 starUV = deflectedP * 8.0;
-      float stars = pow(hash(floor(starUV)), 25.0) * 1.8;
-      vec3 starColor = vec3(stars) * vec3(0.85, 0.9, 1.0);
-
+      // Accretion Disk (Tilted Keplerian projection)
       vec2 diskCoord = p;
-      diskCoord.y /= 0.38;
+      diskCoord.y /= 0.36;
       float diskDist = length(diskCoord);
       float diskAngle = atan(diskCoord.y, diskCoord.x);
 
-      float time = u_time * 0.6;
-      float rotation = diskAngle - time * (1.8 / (diskDist + 0.2));
-      vec2 swirlUV = vec2(diskDist * 4.0, rotation * 2.5);
-      float turbulence = fbm(swirlUV + vec2(time * 0.2, 0.0));
+      // Continuous swirling relativistic gas
+      float time = u_time * 0.5;
+      float rotation = diskAngle - time * (1.6 / (diskDist + 0.18));
+      vec2 swirlCoords = vec2(diskDist * 6.0, rotation * 3.0);
+      float turbulence = smoothFBM(swirlCoords + vec2(time * 0.3, 0.0));
 
-      float innerRim = rs * 1.3;
-      float outerRim = rs * 5.2;
-      float diskMask = smoothstep(innerRim, innerRim + 0.08, diskDist) * (1.0 - smoothstep(outerRim - 0.4, outerRim, diskDist));
+      // Radial density profile
+      float innerRim = rs * 1.25;
+      float outerRim = rs * 5.0;
+      float diskMask = smoothstep(innerRim, innerRim + 0.09, diskDist) * (1.0 - smoothstep(outerRim - 0.4, outerRim, diskDist));
       
-      float doppler = clamp(cos(diskAngle + 0.4) * 0.65 + 0.6, 0.2, 1.6);
-      float diskIntensity = diskMask * turbulence * doppler * 2.2;
+      // Doppler beaming: approaching side is brighter and bluer
+      float doppler = clamp(cos(diskAngle + 0.35) * 0.6 + 0.7, 0.25, 1.6);
+      float diskIntensity = diskMask * turbulence * doppler * 2.4;
 
-      vec3 colInner = vec3(1.0, 0.95, 0.85);
-      vec3 colMid   = vec3(0.95, 0.55, 0.15);
-      vec3 colOuter = vec3(0.75, 0.18, 0.05);
+      // Color Ramp (Luminescent White/Gold -> Amber -> Deep Orange -> Void)
+      vec3 colCore  = vec3(1.0, 0.96, 0.88);
+      vec3 colMid   = vec3(0.96, 0.54, 0.14);
+      vec3 colOuter = vec3(0.78, 0.20, 0.04);
       
       float colorT = clamp((diskDist - innerRim) / (outerRim - innerRim), 0.0, 1.0);
-      vec3 diskColor = mix(colInner, colMid, smoothstep(0.0, 0.4, colorT));
-      diskColor = mix(diskColor, colOuter, smoothstep(0.4, 1.0, colorT));
+      vec3 diskColor = mix(colCore, colMid, smoothstep(0.0, 0.35, colorT));
+      diskColor = mix(diskColor, colOuter, smoothstep(0.35, 1.0, colorT));
       diskColor *= diskIntensity;
 
-      float photonRing = exp(-pow(dist - photonSphere, 2.0) / 0.0004) * 1.4;
-      vec3 photonRingColor = vec3(1.0, 0.92, 0.8) * photonRing;
+      // Sharp incandescent photon ring
+      float photonRing = exp(-pow(dist - photonSphere, 2.0) / 0.00035) * 1.5;
+      vec3 photonRingColor = vec3(1.0, 0.94, 0.82) * photonRing;
 
-      float secondaryArc = exp(-pow(dist - (rs * 1.15), 2.0) / 0.0008) * 0.8 * turbulence;
-      vec3 secondaryColor = vec3(1.0, 0.6, 0.2) * secondaryArc;
+      // Secondary lensed gravitational arc over top/bottom
+      float secondaryArc = exp(-pow(dist - (rs * 1.14), 2.0) / 0.0007) * 0.75 * turbulence;
+      vec3 secondaryColor = vec3(1.0, 0.65, 0.22) * secondaryArc;
 
-      float shadowMask = smoothstep(rs, rs + 0.015, dist);
+      // Event Horizon shadow (pure black singularity)
+      float shadowMask = smoothstep(rs, rs + 0.012, dist);
 
-      vec3 finalColor = starColor;
-      finalColor += diskColor;
-      finalColor += photonRingColor;
-      finalColor += secondaryColor;
+      // Combine layers
+      vec3 finalColor = diskColor + photonRingColor + secondaryColor;
       finalColor *= shadowMask;
 
-      float ambientGlow = exp(-dist * 2.2) * 0.35;
-      finalColor += vec3(0.9, 0.45, 0.15) * ambientGlow * shadowMask;
+      // Smooth ambient glow
+      float ambientGlow = exp(-dist * 2.0) * 0.3;
+      finalColor += vec3(0.95, 0.5, 0.15) * ambientGlow * shadowMask;
 
-      float vignette = 1.0 - smoothstep(0.5, 1.2, length(uv));
+      // Smooth vignette
+      float vignette = 1.0 - smoothstep(0.55, 1.25, length(uv));
       finalColor *= vignette;
 
       gl_FragColor = vec4(finalColor, 1.0);
@@ -153,7 +148,6 @@ export function createRenderer({ canvas }: RendererOptions): BlackHoleRenderer {
     try {
       gl = canvas.getContext("webgl") || (canvas.getContext("experimental-webgl") as WebGLRenderingContext);
       if (!gl) {
-        console.warn("WebGL not supported for BlackHole component, falling back to 2D canvas.");
         init2DFallback();
         return;
       }
@@ -254,7 +248,7 @@ export function createRenderer({ canvas }: RendererOptions): BlackHoleRenderer {
 
       animationFrameId = requestAnimationFrame(render);
     } catch (err) {
-      console.warn("BlackHole WebGL init error:", err);
+      console.warn("BlackHole WebGL fallback to 2D canvas:", err);
       init2DFallback();
     }
   };

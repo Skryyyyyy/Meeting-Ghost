@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ShieldCheck,
   Cpu,
@@ -12,9 +12,11 @@ import {
   Moon,
   Sun,
   Layers,
-  Sparkle,
+  Sparkles,
 } from 'lucide-react';
 import BlackHole from '@/components/ui/black-hole';
+import { ParallaxComponent } from '@/components/ui/parallax-scrolling';
+import Lenis from '@studio-freight/lenis';
 
 interface LandingViewProps {
   onLaunchApp: () => void;
@@ -31,6 +33,26 @@ export const LandingView: React.FC<LandingViewProps> = ({
 }) => {
   const [isDarkMode, setIsDarkMode] = useState(true);
 
+  useEffect(() => {
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      smoothWheel: true,
+    });
+
+    let rafId: number;
+    function raf(time: number) {
+      lenis.raf(time);
+      rafId = requestAnimationFrame(raf);
+    }
+    rafId = requestAnimationFrame(raf);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      lenis.destroy();
+    };
+  }, []);
+
   const handleProtectedClick = () => {
     onLaunchApp();
   };
@@ -41,79 +63,78 @@ export const LandingView: React.FC<LandingViewProps> = ({
         isDarkMode ? 'bg-[#050505] text-white dark' : 'bg-white text-zinc-900'
       }`}
     >
-      {/* Floating Pill Navigation (Hirael Theme) */}
-      <div className="fixed top-5 inset-x-0 z-50 flex justify-center px-4 pointer-events-none">
-        <nav
-          className={`pointer-events-auto h-14 px-4 sm:px-6 rounded-full flex items-center justify-between gap-4 sm:gap-6 border backdrop-blur-2xl shadow-2xl transition-all ${
-            isDarkMode
-              ? 'bg-black/70 border-white/10 text-white shadow-black/80'
-              : 'bg-white/80 border-zinc-200 text-zinc-900 shadow-zinc-200/50'
-          }`}
-        >
+      {/* Grounded Clean Header */}
+      <header
+        className={`sticky top-0 z-40 border-b transition-colors backdrop-blur-xl ${
+          isDarkMode ? 'bg-[#050505]/85 border-white/10 text-white' : 'bg-white/85 border-zinc-200 text-zinc-900'
+        }`}
+      >
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           {/* Brand */}
           <div
-            className="flex items-center space-x-2.5 cursor-pointer"
+            className="flex items-center space-x-3 cursor-pointer"
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           >
             <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${
+              className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm shadow-sm ${
                 isDarkMode ? 'bg-white text-black' : 'bg-zinc-900 text-white'
               }`}
             >
               👻
             </div>
-            <span className="font-semibold text-sm tracking-tight hidden xs:inline-block">Meeting Ghost</span>
-            <span
-              className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
-                isDarkMode ? 'bg-white/5 border-white/10 text-zinc-400' : 'bg-zinc-100 border-zinc-200 text-zinc-700'
-              }`}
-            >
-              v1.0
-            </span>
-          </div>
-
-          {/* Quick Info Badge */}
-          <div
-            className={`hidden md:flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-medium border ${
-              isDarkMode ? 'bg-white/5 border-white/10 text-zinc-300' : 'bg-zinc-100 border-zinc-200 text-zinc-800'
-            }`}
-          >
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-            <span>100% On-Device WebGPU</span>
+            <div className="flex items-center space-x-2">
+              <span className="font-bold text-base tracking-tight">Meeting Ghost</span>
+              <span
+                className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${
+                  isDarkMode ? 'bg-white/5 border-white/10 text-zinc-400' : 'bg-zinc-100 border-zinc-200 text-zinc-700'
+                }`}
+              >
+                v1.0
+              </span>
+            </div>
           </div>
 
           {/* Actions & Theme Switcher */}
           <div className="flex items-center space-x-2 sm:space-x-3">
+            <div
+              className={`hidden md:flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-medium border ${
+                isDarkMode ? 'bg-white/5 border-white/10 text-zinc-300' : 'bg-zinc-100 border-zinc-200 text-zinc-700'
+              }`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span>100% On-Device WebGPU</span>
+            </div>
+
             <button
               onClick={() => setIsDarkMode(!isDarkMode)}
-              className={`p-2 rounded-full border transition-colors cursor-pointer ${
+              className={`p-2 rounded-xl border transition-colors cursor-pointer ${
                 isDarkMode
                   ? 'border-white/10 bg-white/5 hover:bg-white/10 text-zinc-300'
                   : 'border-zinc-200 bg-zinc-100 hover:bg-zinc-200 text-zinc-700'
               }`}
-              title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode (Hirael Theme)'}
+              title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
-              {isDarkMode ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+              {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
 
             {onOpenPrivacyModal && (
               <button
                 onClick={onOpenPrivacyModal}
-                className={`p-2 rounded-full border transition-colors cursor-pointer ${
+                className={`p-2 rounded-xl border transition-colors cursor-pointer ${
                   isDarkMode
                     ? 'border-white/10 bg-white/5 hover:bg-white/10 text-zinc-300'
                     : 'border-zinc-200 bg-zinc-100 hover:bg-zinc-200 text-zinc-700'
                 }`}
-                title="Privacy & Cookie Options"
+                title="Privacy & Security Options"
               >
-                <Sliders className="w-3.5 h-3.5" />
+                <Sliders className="w-4 h-4" />
               </button>
             )}
 
             {isVaultConfigured ? (
               <button
                 onClick={() => onOpenAuth('login')}
-                className={`hidden sm:inline-flex px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-colors cursor-pointer ${
+                className={`hidden sm:inline-flex px-4 py-2 rounded-xl text-xs font-semibold border transition-colors cursor-pointer ${
                   isDarkMode
                     ? 'bg-white/10 hover:bg-white/20 border-white/10 text-white'
                     : 'bg-zinc-100 hover:bg-zinc-200 border-zinc-200 text-zinc-900'
@@ -124,7 +145,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
             ) : (
               <button
                 onClick={() => onOpenAuth('signup')}
-                className={`hidden sm:inline-flex px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-colors cursor-pointer ${
+                className={`hidden sm:inline-flex px-4 py-2 rounded-xl text-xs font-semibold border transition-colors cursor-pointer ${
                   isDarkMode
                     ? 'bg-white/10 hover:bg-white/20 border-white/10 text-white'
                     : 'bg-zinc-100 hover:bg-zinc-200 border-zinc-200 text-zinc-900'
@@ -136,47 +157,47 @@ export const LandingView: React.FC<LandingViewProps> = ({
 
             <button
               onClick={handleProtectedClick}
-              className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all shadow-md cursor-pointer ${
+              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all shadow-sm cursor-pointer ${
                 isDarkMode
                   ? 'bg-white hover:bg-zinc-200 text-black'
                   : 'bg-zinc-900 hover:bg-zinc-800 text-white'
               }`}
             >
-              <span>Launch</span>
+              <span>Launch App</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
-        </nav>
-      </div>
+        </div>
+      </header>
 
-      {/* Hero Section with Relativistic Black Hole Canvas Backdrop */}
-      <section className="relative min-h-[90vh] flex flex-col items-center justify-center pt-28 pb-16 px-4 text-center overflow-hidden">
-        {/* Black Hole Background Canvas */}
-        <div className="absolute inset-0 z-0 pointer-events-auto opacity-70 dark:opacity-85 transition-opacity">
+      {/* Hero Section with Ambient Black Hole Visualizer */}
+      <section className="relative min-h-[85vh] flex flex-col items-center justify-center pt-16 pb-20 px-4 text-center overflow-hidden">
+        {/* Ambient Cosmic Visualizer Canvas */}
+        <div className="absolute inset-0 z-0 pointer-events-auto opacity-75 dark:opacity-90">
           <BlackHole />
-          {/* Radial & Linear Vignette Overlays for Seamless Text Readability */}
+          {/* Natural Vignette Fade */}
           <div
             className={`absolute inset-0 pointer-events-none ${
               isDarkMode
-                ? 'bg-gradient-to-b from-black/60 via-black/20 to-[#050505]'
-                : 'bg-gradient-to-b from-white/70 via-white/30 to-white'
+                ? 'bg-gradient-to-b from-[#050505]/40 via-transparent to-[#050505]'
+                : 'bg-gradient-to-b from-white/60 via-transparent to-white'
             }`}
           />
         </div>
 
         {/* Hero Content */}
         <div className="relative z-10 max-w-4xl mx-auto flex flex-col items-center">
-          {/* Status Badge */}
+          {/* Trust Badge */}
           <div
             onClick={handleProtectedClick}
-            className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium mb-8 border backdrop-blur-md cursor-pointer transition-all hover:scale-105 ${
+            className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium mb-6 border backdrop-blur-md cursor-pointer transition-all hover:scale-105 ${
               isDarkMode
-                ? 'bg-white/[0.07] hover:bg-white/[0.12] border-white/15 text-zinc-200 shadow-xl shadow-black/40'
+                ? 'bg-white/[0.08] hover:bg-white/[0.14] border-white/15 text-zinc-200'
                 : 'bg-zinc-900/5 hover:bg-zinc-900/10 border-zinc-200 text-zinc-800'
             }`}
           >
             <Lock className="w-3.5 h-3.5 text-amber-400" />
-            <span>100% Client-Side Physics • Zero Cloud Telemetry</span>
+            <span>100% Private & Secure • Zero Cloud Telemetry</span>
           </div>
 
           <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight leading-[1.1] max-w-3xl">
@@ -188,7 +209,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
                   : 'text-zinc-500'
               }
             >
-              without leaving your device.
+              without your voice ever leaving your device.
             </span>
           </h1>
 
@@ -197,14 +218,14 @@ export const LandingView: React.FC<LandingViewProps> = ({
               isDarkMode ? 'text-zinc-400' : 'text-zinc-600'
             }`}
           >
-            Whisper speech-to-text and LLM action extraction run locally in your WebGPU sandbox.
-            No cloud APIs, zero per-minute transcription fees, and zero data leakage.
+            Whisper transcription and structured AI extraction run completely inside your browser.
+            No cloud APIs, no subscription fees, and complete confidentiality.
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-4 mt-10">
             <button
               onClick={handleProtectedClick}
-              className={`inline-flex items-center gap-2.5 px-8 py-4 rounded-full font-bold text-sm transition-all transform hover:scale-105 active:scale-95 shadow-2xl cursor-pointer ${
+              className={`inline-flex items-center gap-2.5 px-8 py-4 rounded-xl font-bold text-sm transition-all transform hover:scale-105 active:scale-95 shadow-lg cursor-pointer ${
                 isDarkMode
                   ? 'bg-white text-black hover:bg-zinc-200 shadow-white/10'
                   : 'bg-zinc-900 text-white hover:bg-zinc-800 shadow-zinc-900/20'
@@ -217,7 +238,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
             {!isVaultConfigured ? (
               <button
                 onClick={() => onOpenAuth('signup')}
-                className={`inline-flex items-center gap-2 px-6 py-4 rounded-full font-semibold text-sm border backdrop-blur-md transition-all cursor-pointer ${
+                className={`inline-flex items-center gap-2 px-6 py-4 rounded-xl font-semibold text-sm border backdrop-blur-md transition-all cursor-pointer ${
                   isDarkMode
                     ? 'bg-white/5 hover:bg-white/10 border-white/15 text-white'
                     : 'bg-white hover:bg-zinc-100 border-zinc-200 text-zinc-900'
@@ -229,7 +250,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
             ) : (
               <button
                 onClick={() => onOpenAuth('login')}
-                className={`inline-flex items-center gap-2 px-6 py-4 rounded-full font-semibold text-sm border backdrop-blur-md transition-all cursor-pointer ${
+                className={`inline-flex items-center gap-2 px-6 py-4 rounded-xl font-semibold text-sm border backdrop-blur-md transition-all cursor-pointer ${
                   isDarkMode
                     ? 'bg-white/5 hover:bg-white/10 border-white/15 text-white'
                     : 'bg-white hover:bg-zinc-100 border-zinc-200 text-zinc-900'
@@ -241,7 +262,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
             )}
           </div>
 
-          {/* Social Proof / Trusted Users (Unsplash stock avatars) */}
+          {/* Social Proof with Unsplash Avatars */}
           <div className="mt-12 flex items-center gap-3">
             <div className="flex -space-x-2 overflow-hidden">
               <img
@@ -267,7 +288,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
         </div>
       </section>
 
-      {/* Metrics Bar (Hirael Stat Grid) */}
+      {/* Metrics Bar */}
       <section
         className={`py-12 px-4 border-y transition-colors ${
           isDarkMode ? 'border-white/10 bg-white/[0.02]' : 'border-zinc-200 bg-zinc-50'
@@ -278,13 +299,13 @@ export const LandingView: React.FC<LandingViewProps> = ({
             <div className={`text-3xl font-extrabold tracking-tight ${isDarkMode ? 'text-white' : 'text-zinc-900'}`}>
               100%
             </div>
-            <div className={`text-xs ${isDarkMode ? 'text-zinc-400' : 'text-zinc-600'}`}>On-Device Physics</div>
+            <div className={`text-xs ${isDarkMode ? 'text-zinc-400' : 'text-zinc-600'}`}>On-Device Processing</div>
           </div>
           <div className="space-y-1">
             <div className={`text-3xl font-extrabold tracking-tight ${isDarkMode ? 'text-white' : 'text-zinc-900'}`}>
               0 ms
             </div>
-            <div className={`text-xs ${isDarkMode ? 'text-zinc-400' : 'text-zinc-600'}`}>Cloud Transmission</div>
+            <div className={`text-xs ${isDarkMode ? 'text-zinc-400' : 'text-zinc-600'}`}>Cloud Latency</div>
           </div>
           <div className="space-y-1">
             <div className={`text-3xl font-extrabold tracking-tight ${isDarkMode ? 'text-white' : 'text-zinc-900'}`}>
@@ -296,27 +317,31 @@ export const LandingView: React.FC<LandingViewProps> = ({
             <div className={`text-3xl font-extrabold tracking-tight ${isDarkMode ? 'text-white' : 'text-zinc-900'}`}>
               $0.00
             </div>
-            <div className={`text-xs ${isDarkMode ? 'text-zinc-400' : 'text-zinc-600'}`}>Token / API Cost</div>
+            <div className={`text-xs ${isDarkMode ? 'text-zinc-400' : 'text-zinc-600'}`}>Per-Minute API Cost</div>
           </div>
         </div>
       </section>
 
-      {/* Bento Grid Feature Showcase (Hirael Bento Style) */}
+      {/* Parallax Depth Section with Smooth Lenis & GSAP Scroll */}
+      <ParallaxComponent />
+
+      {/* Bento Grid Feature Showcase */}
       <section className="py-20 px-4 max-w-5xl mx-auto">
         <div className="text-center mb-14">
           <div
             className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider mb-4 border ${
               isDarkMode ? 'bg-white/5 border-white/10 text-zinc-400' : 'bg-zinc-100 border-zinc-200 text-zinc-700'
-            }`}
-          >
-            <Sparkle className="w-3 h-3" />
-            <span>Architecture & Capabilities</span>
-          </div>
-          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">Built for High-Stakes Confidentiality</h2>
-          <p className={`text-sm mt-3 max-w-xl mx-auto ${isDarkMode ? 'text-zinc-400' : 'text-zinc-600'}`}>
-            Every step of the audio analysis, transcript synchronization, and action checklist stays inside your local sandbox.
-          </p>
-        </div>
+                    ? 'bg-white/5 border-white/10 text-zinc-400' : 'bg-zinc-100 border-zinc-200 text-zinc-700'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Architecture & Capabilities</span>
+              </div>
+              <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">Built for High-Stakes Confidentiality</h2>
+              <p className={`text-sm mt-3 max-w-xl mx-auto ${isDarkMode ? 'text-zinc-400' : 'text-zinc-600'}`}>
+                Every step of the audio analysis, transcript synchronization, and action checklist stays inside your local sandbox.
+              </p>
+            </div>
 
         {/* Bento Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -522,7 +547,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
                   </td>
                   <td className="py-4 px-6 font-semibold flex items-center gap-1.5 text-emerald-400">
                     <CheckCircle2 className="w-4 h-4 shrink-0" />
-                    Fully Compliant by Physics
+                    100% Private by Architecture
                   </td>
                 </tr>
               </tbody>
