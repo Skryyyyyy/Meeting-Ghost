@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  ShieldCheck,
   Cpu,
   Mic,
   Lock,
@@ -96,15 +95,6 @@ export const LandingView: React.FC<LandingViewProps> = ({
 
           {/* Actions & Theme Switcher */}
           <div className="flex items-center space-x-2 sm:space-x-3">
-            <div
-              className={`hidden md:flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-medium border ${
-                isDarkMode ? 'bg-white/5 border-white/10 text-zinc-300' : 'bg-zinc-100 border-zinc-200 text-zinc-700'
-              }`}
-            >
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-              <span>100% On-Device WebGPU</span>
-            </div>
-
             <button
               onClick={() => setIsDarkMode(!isDarkMode)}
               className={`p-2 rounded-xl border transition-colors cursor-pointer ${
