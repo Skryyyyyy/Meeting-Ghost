@@ -34,6 +34,7 @@ export interface VaultProfile {
 const VAULT_PROFILE_KEY = 'ghost_vault_profile';
 const USER_PROFILE_KEY = 'ghost_user_profile';
 const SESSION_AUTH_KEY = 'ghost_vault_unlocked';
+const REMEMBER_ME_AUTH_KEY = 'ghost_remember_token';
 
 // In-memory rate limiting defense (resists client-side localStorage tampering)
 let memoryFailedAttempts = 0;
@@ -76,8 +77,28 @@ export function isVaultSetup(): boolean {
 }
 
 export function isVaultUnlocked(): boolean {
-  if (typeof sessionStorage === 'undefined') return false;
-  return sessionStorage.getItem(SESSION_AUTH_KEY) === 'true';
+  if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(SESSION_AUTH_KEY) === 'true') {
+    return true;
+  }
+  if (typeof localStorage !== 'undefined') {
+    const rememberRaw = localStorage.getItem(REMEMBER_ME_AUTH_KEY);
+    if (rememberRaw) {
+      try {
+        const parsed = JSON.parse(rememberRaw);
+        if (parsed && typeof parsed.validUntil === 'number' && parsed.validUntil > Date.now()) {
+          if (typeof sessionStorage !== 'undefined') {
+            sessionStorage.setItem(SESSION_AUTH_KEY, 'true');
+          }
+          return true;
+        } else {
+          localStorage.removeItem(REMEMBER_ME_AUTH_KEY);
+        }
+      } catch {
+        localStorage.removeItem(REMEMBER_ME_AUTH_KEY);
+      }
+    }
+  }
+  return false;
 }
 
 export function getCurrentUser(): UserProfile | null {
@@ -91,7 +112,12 @@ export function getCurrentUser(): UserProfile | null {
   }
 }
 
-export async function setupVault(username: string, pin: string, email?: string): Promise<void> {
+export async function setupVault(
+  username: string,
+  pin: string,
+  email?: string,
+  rememberMe: boolean = false
+): Promise<void> {
   // SQL injection & sanitation check
   const sanitizedUser = sanitizeAndCheckSql(username).sanitizedValue || 'Vault Owner';
   const salt = crypto.getRandomValues(new Uint8Array(16));
@@ -124,7 +150,21 @@ export async function setupVault(username: string, pin: string, email?: string):
 
   localStorage.setItem(VAULT_PROFILE_KEY, JSON.stringify(profile));
   localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(user));
-  sessionStorage.setItem(SESSION_AUTH_KEY, 'true');
+  
+  if (typeof sessionStorage !== 'undefined') {
+    sessionStorage.setItem(SESSION_AUTH_KEY, 'true');
+  }
+
+  if (rememberMe && typeof localStorage !== 'undefined') {
+    // 30-day persistent remember token
+    localStorage.setItem(
+      REMEMBER_ME_AUTH_KEY,
+      JSON.stringify({ validUntil: Date.now() + 30 * 24 * 60 * 60 * 1000 })
+    );
+  } else if (typeof localStorage !== 'undefined') {
+    localStorage.removeItem(REMEMBER_ME_AUTH_KEY);
+  }
+
   resetFailedAttempts();
 }
 
@@ -205,7 +245,10 @@ export async function updateMasterPin(
 /**
  * Google Sign In with Firebase Auth
  */
-export async function signInWithGoogle(masterPin: string = '0000'): Promise<UserProfile> {
+export async function signInWithGoogle(
+  masterPin: string = '0000',
+  rememberMe: boolean = false
+): Promise<UserProfile> {
   if (!auth) {
     const mockGoogleUser: UserProfile = {
       uid: 'google-demo-user-101',
@@ -215,7 +258,7 @@ export async function signInWithGoogle(masterPin: string = '0000'): Promise<User
       authProvider: 'google',
       createdAt: Date.now(),
     };
-    await setupVault(mockGoogleUser.displayName, masterPin, mockGoogleUser.email);
+    await setupVault(mockGoogleUser.displayName, masterPin, mockGoogleUser.email, rememberMe);
     localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(mockGoogleUser));
     return mockGoogleUser;
   }
@@ -232,7 +275,7 @@ export async function signInWithGoogle(masterPin: string = '0000'): Promise<User
       createdAt: Date.now(),
     };
 
-    await setupVault(user.displayName, masterPin, user.email);
+    await setupVault(user.displayName, masterPin, user.email, rememberMe);
     localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(user));
     return user;
   } catch (err: any) {
@@ -244,7 +287,7 @@ export async function signInWithGoogle(masterPin: string = '0000'): Promise<User
       authProvider: 'google',
       createdAt: Date.now(),
     };
-    await setupVault(fallbackUser.displayName, masterPin, fallbackUser.email);
+    await setupVault(fallbackUser.displayName, masterPin, fallbackUser.email, rememberMe);
     localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(fallbackUser));
     return fallbackUser;
   }
@@ -257,7 +300,8 @@ export async function registerWithEmail(
   email: string,
   pass: string,
   displayName: string,
-  pin: string
+  pin: string,
+  rememberMe: boolean = false
 ): Promise<UserProfile> {
   const sqlCheck = sanitizeAndCheckSql(displayName + email);
   if (!sqlCheck.isSafe) {
@@ -274,7 +318,7 @@ export async function registerWithEmail(
         authProvider: 'email',
         createdAt: Date.now(),
       };
-      await setupVault(displayName, pin, email);
+      await setupVault(displayName, pin, email, rememberMe);
       localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(user));
       return user;
     } catch (e: any) {
@@ -289,7 +333,7 @@ export async function registerWithEmail(
     authProvider: 'email',
     createdAt: Date.now(),
   };
-  await setupVault(displayName, pin, email);
+  await setupVault(displayName, pin, email, rememberMe);
   localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(localUser));
   return localUser;
 }
@@ -297,7 +341,12 @@ export async function registerWithEmail(
 /**
  * Email & Password Log In
  */
-export async function loginWithEmail(email: string, pass: string, pin: string): Promise<UserProfile> {
+export async function loginWithEmail(
+  email: string,
+  pass: string,
+  pin: string,
+  rememberMe: boolean = false
+): Promise<UserProfile> {
   const sqlCheck = sanitizeAndCheckSql(email);
   if (!sqlCheck.isSafe) {
     throw new Error('Input security validation failed.');
@@ -313,7 +362,7 @@ export async function loginWithEmail(email: string, pass: string, pin: string): 
         authProvider: 'email',
         createdAt: Date.now(),
       };
-      await verifyVaultPin(pin);
+      await verifyVaultPin(pin, rememberMe);
       localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(user));
       return user;
     } catch (e: any) {
@@ -321,7 +370,7 @@ export async function loginWithEmail(email: string, pass: string, pin: string): 
     }
   }
 
-  const verify = await verifyVaultPin(pin);
+  const verify = await verifyVaultPin(pin, rememberMe);
   if (!verify.success) {
     throw new Error(verify.error || 'Invalid Vault PIN');
   }
@@ -336,7 +385,10 @@ export async function loginWithEmail(email: string, pass: string, pin: string): 
   return existing;
 }
 
-export async function verifyVaultPin(enteredPin: string): Promise<{ success: boolean; error?: string }> {
+export async function verifyVaultPin(
+  enteredPin: string,
+  rememberMe: boolean = false
+): Promise<{ success: boolean; error?: string }> {
   // Check lockout (memory + storage hybrid rate limiting)
   const lockoutStatus = checkLockout();
   if (lockoutStatus.locked) {
@@ -346,12 +398,27 @@ export async function verifyVaultPin(enteredPin: string): Promise<{ success: boo
     };
   }
 
+  const recordAuthSuccess = () => {
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem(SESSION_AUTH_KEY, 'true');
+    }
+    if (rememberMe && typeof localStorage !== 'undefined') {
+      localStorage.setItem(
+        REMEMBER_ME_AUTH_KEY,
+        JSON.stringify({ validUntil: Date.now() + 30 * 24 * 60 * 60 * 1000 })
+      );
+    } else if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(REMEMBER_ME_AUTH_KEY);
+    }
+    resetFailedAttempts();
+  };
+
   const rawProfile = localStorage.getItem(VAULT_PROFILE_KEY);
   if (!rawProfile) {
     if (enteredPin === '0000') {
       const key = await deriveKeyFromPassphrase('0000', new Uint8Array(16));
       setActiveCryptoKey(key);
-      sessionStorage.setItem(SESSION_AUTH_KEY, 'true');
+      recordAuthSuccess();
       return { success: true };
     }
     return { success: false, error: 'Vault not initialized. Enter 0000 or set up your vault.' };
@@ -369,8 +436,7 @@ export async function verifyVaultPin(enteredPin: string): Promise<{ success: boo
     if (computedHash === profile.pinHash) {
       const key = await deriveKeyFromPassphrase(enteredPin, salt);
       setActiveCryptoKey(key);
-      sessionStorage.setItem(SESSION_AUTH_KEY, 'true');
-      resetFailedAttempts();
+      recordAuthSuccess();
       return { success: true };
     }
   } catch (err) {
@@ -392,6 +458,9 @@ export function lockVault(): void {
   clearActiveCryptoKey();
   if (typeof sessionStorage !== 'undefined') {
     sessionStorage.removeItem(SESSION_AUTH_KEY);
+  }
+  if (typeof localStorage !== 'undefined') {
+    localStorage.removeItem(REMEMBER_ME_AUTH_KEY);
   }
   if (auth) {
     signOut(auth).catch(() => {});

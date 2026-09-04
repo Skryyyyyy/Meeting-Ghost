@@ -8,9 +8,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Lock,
-  Camera,
-  HardDrive,
-  Sparkles,
 } from 'lucide-react';
 import {
   getCurrentUser,

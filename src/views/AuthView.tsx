@@ -42,6 +42,7 @@ export const AuthView: React.FC<AuthViewProps> = ({
   const [password, setPassword] = useState('');
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [resetSuccess, setResetSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -51,7 +52,7 @@ export const AuthView: React.FC<AuthViewProps> = ({
     setErrorMsg('');
     setIsProcessing(true);
     try {
-      await signInWithGoogle(pin || '0000');
+      await signInWithGoogle(pin || '0000', rememberMe);
       onAuthenticated();
     } catch (err: any) {
       setErrorMsg(err.message || 'Google Sign-In failed.');
@@ -114,9 +115,9 @@ export const AuthView: React.FC<AuthViewProps> = ({
             setIsProcessing(false);
             return;
           }
-          await registerWithEmail(email, password, username || 'Vault Owner', pin);
+          await registerWithEmail(email, password, username || 'Vault Owner', pin, rememberMe);
         } else {
-          await setupVault(username || 'Vault Owner', pin, email);
+          await setupVault(username || 'Vault Owner', pin, email, rememberMe);
         }
         onAuthenticated();
       } catch (err: any) {
@@ -134,10 +135,10 @@ export const AuthView: React.FC<AuthViewProps> = ({
       setIsProcessing(true);
       try {
         if (authMethod === 'email') {
-          await loginWithEmail(email, password, pin);
+          await loginWithEmail(email, password, pin, rememberMe);
           onAuthenticated();
         } else {
-          const result = await verifyVaultPin(pin);
+          const result = await verifyVaultPin(pin, rememberMe);
           if (result.success) {
             onAuthenticated();
           } else {
@@ -355,6 +356,24 @@ export const AuthView: React.FC<AuthViewProps> = ({
                     className="w-full bg-zinc-50 border border-zinc-200 rounded-xl pl-10 pr-3 py-2.5 text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-zinc-900 tracking-widest font-mono"
                   />
                 </div>
+              </div>
+            )}
+
+            {mode !== 'reset_pin' && (
+              <div className="flex items-start gap-2.5 pt-1.5 pb-1">
+                <input
+                  type="checkbox"
+                  id="rememberMe"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900 cursor-pointer accent-zinc-900"
+                />
+                <label htmlFor="rememberMe" className="text-xs text-zinc-600 select-none cursor-pointer leading-tight">
+                  <span className="font-semibold text-zinc-800">Always remember me</span>
+                  <span className="block text-[11px] text-zinc-400 mt-0.5">
+                    If unchecked, the account automatically logs out when the browser session ends.
+                  </span>
+                </label>
               </div>
             )}
 

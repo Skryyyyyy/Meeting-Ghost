@@ -93,4 +93,36 @@ describe('On-Device Auth & PIN Service', () => {
     const verifyNew = await verifyVaultPin('5678');
     expect(verifyNew.success).toBe(true);
   });
+
+  it('automatically logs out on session end when rememberMe is false', async () => {
+    await setupVault('Eve', '1234', 'eve@test.com', false);
+    expect(isVaultUnlocked()).toBe(true);
+
+    // End browser session (clear sessionStorage)
+    sessionStorage.clear();
+    expect(isVaultUnlocked()).toBe(false);
+
+    // Unlock without remember me
+    const unlockRes = await verifyVaultPin('1234', false);
+    expect(unlockRes.success).toBe(true);
+    expect(isVaultUnlocked()).toBe(true);
+
+    // End session again
+    sessionStorage.clear();
+    expect(isVaultUnlocked()).toBe(false);
+  });
+
+  it('persists session across browser restarts when rememberMe is true', async () => {
+    await setupVault('Dave', '5678', 'dave@test.com', true);
+    expect(isVaultUnlocked()).toBe(true);
+
+    // Simulate closing and reopening browser tab
+    sessionStorage.clear();
+    expect(isVaultUnlocked()).toBe(true);
+
+    // Calling lockVault() clears remember token
+    lockVault();
+    sessionStorage.clear();
+    expect(isVaultUnlocked()).toBe(false);
+  });
 });

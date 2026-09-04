@@ -11,7 +11,6 @@ import {
   Moon,
   Sun,
   Layers,
-  Sparkles,
 } from 'lucide-react';
 import BlackHole from '@/components/ui/black-hole';
 import { ParallaxComponent } from '@/components/ui/parallax-scrolling';
