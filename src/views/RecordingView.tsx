@@ -13,8 +13,11 @@ import {
   Lightbulb,
   Pin,
   Globe,
+  Radio,
+  Eye,
 } from 'lucide-react';
 import { LiveWaveform } from '../components/LiveWaveform';
+import { VoiceReactiveOrb } from '../components/VoiceReactiveOrb';
 import { MeetingTemplate, MeetingBookmark, TranscriptionLanguage } from '../types/meeting';
 
 interface RecordingViewProps {
@@ -47,6 +50,7 @@ export const RecordingView: React.FC<RecordingViewProps> = ({
   const [seconds, setSeconds] = useState(0);
   const [bookmarks, setBookmarks] = useState<MeetingBookmark[]>([]);
   const [lastBookmarkText, setLastBookmarkText] = useState<string | null>(null);
+  const [visualMode, setVisualMode] = useState<'orb' | 'waveform' | 'dual'>('orb');
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -106,7 +110,7 @@ export const RecordingView: React.FC<RecordingViewProps> = ({
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 flex flex-col items-center justify-center min-h-[75vh]">
       {/* Live Badge */}
-      <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-zinc-100 border border-zinc-200 mb-6 shadow-xs">
+      <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-zinc-100 border border-zinc-200 mb-4 shadow-xs">
         <span className="relative flex h-2.5 w-2.5">
           {!isPaused && (
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-zinc-900 opacity-75"></span>
@@ -127,19 +131,65 @@ export const RecordingView: React.FC<RecordingViewProps> = ({
         </span>
       </div>
 
+      {/* Visualizer Mode Switcher */}
+      <div className="flex items-center gap-1 p-1 bg-zinc-100 border border-zinc-200 rounded-xl mb-4 text-[11px] font-bold">
+        <button
+          type="button"
+          onClick={() => setVisualMode('orb')}
+          className={`px-3 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+            visualMode === 'orb' ? 'bg-white text-zinc-900 shadow-xs' : 'text-zinc-500 hover:text-zinc-900'
+          }`}
+        >
+          <Radio className="w-3 h-3" />
+          Reactive Orb
+        </button>
+        <button
+          type="button"
+          onClick={() => setVisualMode('waveform')}
+          className={`px-3 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+            visualMode === 'waveform' ? 'bg-white text-zinc-900 shadow-xs' : 'text-zinc-500 hover:text-zinc-900'
+          }`}
+        >
+          <Activity className="w-3 h-3" />
+          Waveform
+        </button>
+        <button
+          type="button"
+          onClick={() => setVisualMode('dual')}
+          className={`px-3 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+            visualMode === 'dual' ? 'bg-white text-zinc-900 shadow-xs' : 'text-zinc-500 hover:text-zinc-900'
+          }`}
+        >
+          <Eye className="w-3 h-3" />
+          Dual View
+        </button>
+      </div>
+
+      {/* Voice Reactive Orb (WebGL Shader) */}
+      {(visualMode === 'orb' || visualMode === 'dual') && (
+        <VoiceReactiveOrb
+          getWaveformData={getWaveformData}
+          isRecording={true}
+          isPaused={isPaused}
+          size={visualMode === 'dual' ? 170 : 210}
+        />
+      )}
+
       {/* Timer */}
-      <div className="text-6xl sm:text-7xl font-extrabold font-mono text-zinc-900 tracking-tight mb-4 select-none">
+      <div className="text-5xl sm:text-6xl font-extrabold font-mono text-zinc-900 tracking-tight my-3 select-none">
         {formatTime(seconds)}
       </div>
 
       {/* Real-time Waveform Canvas */}
-      <div className="w-full mb-6">
-        <LiveWaveform
-          getWaveformData={getWaveformData}
-          isRecording={true}
-          isPaused={isPaused}
-        />
-      </div>
+      {(visualMode === 'waveform' || visualMode === 'dual') && (
+        <div className="w-full mb-6">
+          <LiveWaveform
+            getWaveformData={getWaveformData}
+            isRecording={true}
+            isPaused={isPaused}
+          />
+        </div>
+      )}
 
       {/* Live Milestone Bookmarking Row */}
       <div className="w-full mb-6 p-4 rounded-2xl bg-zinc-50 border border-zinc-200 space-y-3">

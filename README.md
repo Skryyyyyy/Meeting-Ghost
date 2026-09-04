@@ -106,6 +106,7 @@ Detailed engineering logs of every phase are maintained in the [`history/`](hist
 - [`history/12-session-desync-and-audio-forensic-zeroing.md`](history/12-session-desync-and-audio-forensic-zeroing.md) — Firebase session revocation sync, audio buffer zeroing, and RFC 822 .EML export.
 - [`history/13-storage-quota-monitoring-and-resilience.md`](history/13-storage-quota-monitoring-and-resilience.md) — Browser storage quota estimator, disk usage telemetry, and IndexedDB resilience.
 - [`history/14-pwa-milestones-and-search-highlighting.md`](history/14-pwa-milestones-and-search-highlighting.md) — PWA desktop manifest, live meeting milestone bookmarks, and interactive transcript search highlighting.
+- [`history/15-webgl-voice-reactive-orb.md`](history/15-webgl-voice-reactive-orb.md) — WebGL OGL voice reactive iridescent orb shader and real-time visualizer mode switcher.
 
 ---
 
