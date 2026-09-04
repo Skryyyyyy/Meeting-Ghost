@@ -4,6 +4,7 @@ import { MeetingData, ActionItem } from '../types/meeting';
 import { ActionItemsList } from '../components/ActionItemsList';
 import { FollowUpComposer } from '../components/FollowUpComposer';
 import { TranscriptViewer } from '../components/TranscriptViewer';
+import { WaveformScrubber } from '../components/WaveformScrubber';
 
 interface SummaryViewProps {
   meeting: MeetingData;
@@ -179,27 +180,25 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
               <span>{isPlayingAudio ? 'Pause Audio' : 'Play Audio Sync'}</span>
             </button>
 
-            <div className="flex-1 w-full flex items-center gap-3">
-              <span className="text-xs font-mono text-zinc-600 shrink-0">
-                {Math.floor(audioCurrentTime / 60)}:{Math.floor(audioCurrentTime % 60).toString().padStart(2, '0')}
-              </span>
-              <input
-                type="range"
-                min="0"
-                max={audioDuration || 100}
-                value={audioCurrentTime}
-                onChange={(e) => {
-                  const val = parseFloat(e.target.value);
+            <div className="flex-1 w-full flex flex-col gap-1">
+              <WaveformScrubber
+                currentTime={audioCurrentTime}
+                duration={audioDuration || 100}
+                onSeek={(newTime) => {
                   if (audioRef.current) {
-                    audioRef.current.currentTime = val;
-                    setAudioCurrentTime(val);
+                    audioRef.current.currentTime = newTime;
+                    setAudioCurrentTime(newTime);
                   }
                 }}
-                className="w-full accent-zinc-900 cursor-pointer"
               />
-              <span className="text-xs font-mono text-zinc-400 shrink-0">
-                {Math.floor(audioDuration / 60)}:{Math.floor(audioDuration % 60).toString().padStart(2, '0')}
-              </span>
+              <div className="flex items-center justify-between text-[11px] font-mono text-zinc-500 px-1">
+                <span>
+                  {Math.floor(audioCurrentTime / 60)}:{Math.floor(audioCurrentTime % 60).toString().padStart(2, '0')}
+                </span>
+                <span>
+                  {Math.floor(audioDuration / 60)}:{Math.floor(audioDuration % 60).toString().padStart(2, '0')}
+                </span>
+              </div>
             </div>
           </div>
         )}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mic, Search, Sparkles, Shield, Upload, FileAudio } from 'lucide-react';
+import { Mic, Search, Sparkles, Shield, Upload, FileAudio, BarChart3, Clock, CheckCircle2, Layers } from 'lucide-react';
 import { MeetingData } from '../types/meeting';
 import { MeetingCard } from '../components/MeetingCard';
 import { SAMPLE_MEETINGS } from '../services/mockMeetings';
@@ -22,6 +22,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   onUploadAudioFile,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
   const filteredMeetings = meetings.filter(
     (m) =>
@@ -30,14 +31,24 @@ export const HomeView: React.FC<HomeViewProps> = ({
       m.participants.some((p) => p.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  // Compute live analytics
+  const totalSeconds = meetings.reduce((acc, m) => acc + (m.durationSeconds || 60), 0);
+  const totalHours = (totalSeconds / 3600).toFixed(1);
+  const allActionItems = meetings.flatMap((m) => m.actionItems || []);
+  const completedActions = allActionItems.filter((a) => a.completed).length;
+  const actionCompletionRate = allActionItems.length > 0 ? Math.round((completedActions / allActionItems.length) * 100) : 100;
+
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 50 * 1024 * 1024) {
-        alert('File is too large. Please select an audio file under 50MB for on-device processing.');
-        return;
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file.size > 50 * 1024 * 1024) {
+          alert(`File "${file.name}" exceeds 50MB limit.`);
+          continue;
+        }
+        onUploadAudioFile(file);
       }
-      onUploadAudioFile(file);
     }
   };
 
@@ -73,17 +84,70 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
             <label className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-white hover:bg-zinc-100 text-zinc-800 text-sm font-semibold border border-zinc-200 transition-colors cursor-pointer shadow-xs">
               <Upload className="w-4 h-4 text-zinc-700" />
-              <span>Import Audio File</span>
+              <span>Import Audio / Batch Queue</span>
               <input
                 type="file"
+                multiple
                 accept="audio/*,video/*"
                 onChange={handleFileInput}
                 className="hidden"
               />
             </label>
+
+            <button
+              type="button"
+              onClick={() => setShowAnalytics(!showAnalytics)}
+              className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-white hover:bg-zinc-100 text-zinc-800 text-sm font-semibold border border-zinc-200 transition-colors cursor-pointer shadow-xs"
+            >
+              <BarChart3 className="w-4 h-4 text-zinc-700" />
+              <span>{showAnalytics ? 'Hide Analytics' : 'Analytics Overview'}</span>
+            </button>
           </div>
         </div>
       </div>
+
+      {/* Analytics Overview Card */}
+      {showAnalytics && (
+        <div className="mb-8 p-6 rounded-3xl bg-zinc-900 text-white shadow-xl animate-in fade-in duration-200">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-white" />
+              <h3 className="text-sm font-bold tracking-tight">Vault Productivity Metrics</h3>
+            </div>
+            <span className="text-xs font-mono text-zinc-400">On-Device Telemetry</span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="p-4 rounded-2xl bg-zinc-800/80 border border-zinc-700">
+              <div className="text-zinc-400 text-xs flex items-center gap-1.5 font-medium">
+                <Layers className="w-3.5 h-3.5 text-zinc-300" /> Meetings
+              </div>
+              <div className="text-2xl font-extrabold font-mono mt-1 text-white">{meetings.length}</div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-zinc-800/80 border border-zinc-700">
+              <div className="text-zinc-400 text-xs flex items-center gap-1.5 font-medium">
+                <Clock className="w-3.5 h-3.5 text-zinc-300" /> Recorded Time
+              </div>
+              <div className="text-2xl font-extrabold font-mono mt-1 text-white">{totalHours}h</div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-zinc-800/80 border border-zinc-700">
+              <div className="text-zinc-400 text-xs flex items-center gap-1.5 font-medium">
+                <CheckCircle2 className="w-3.5 h-3.5 text-zinc-300" /> Action Items
+              </div>
+              <div className="text-2xl font-extrabold font-mono mt-1 text-white">{allActionItems.length}</div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-zinc-800/80 border border-zinc-700">
+              <div className="text-zinc-400 text-xs flex items-center gap-1.5 font-medium">
+                <Sparkles className="w-3.5 h-3.5 text-zinc-300" /> Completion Rate
+              </div>
+              <div className="text-2xl font-extrabold font-mono mt-1 text-white">{actionCompletionRate}%</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Preloaded Demo Samples */}
       <div className="mb-8">
@@ -122,49 +186,61 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </div>
       </div>
 
-      {/* Search & Meeting List */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold text-zinc-900 tracking-tight">Meeting History</h3>
-          <span className="text-xs text-zinc-500 font-medium">{meetings.length} recordings stored locally</span>
+      {/* Search and Meeting List Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h3 className="text-lg font-bold text-zinc-900">Encrypted Meeting Records</h3>
+          <p className="text-xs text-zinc-500 mt-0.5">
+            {meetings.length} meeting{meetings.length === 1 ? '' : 's'} stored in local PBKDF2/AES-GCM-256 vault
+          </p>
         </div>
 
-        {meetings.length > 0 && (
-          <div className="relative">
-            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
-            <input
-              type="text"
-              placeholder="Search meetings by keyword, decision, or participant..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white border border-zinc-200 rounded-xl pl-10 pr-4 py-2.5 text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-zinc-900 shadow-xs"
-            />
-          </div>
-        )}
-
-        {filteredMeetings.length === 0 ? (
-          <div className="text-center py-16 bg-zinc-50/50 border border-dashed border-zinc-200 rounded-3xl p-8">
-            <div className="w-12 h-12 mx-auto rounded-2xl bg-zinc-100 flex items-center justify-center text-zinc-400 mb-3">
-              <Mic className="w-6 h-6" />
-            </div>
-            <h4 className="text-sm font-bold text-zinc-700">No meetings recorded yet</h4>
-            <p className="text-xs text-zinc-500 mt-1 max-w-sm mx-auto">
-              Tap the record button above or click an instant demo sample to see on-device summarization in action.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3.5">
-            {filteredMeetings.map((meeting) => (
-              <MeetingCard
-                key={meeting.id}
-                meeting={meeting}
-                onSelect={onSelectMeeting}
-                onDelete={onDeleteMeeting}
-              />
-            ))}
-          </div>
-        )}
+        <div className="relative w-full sm:w-64">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
+          <input
+            type="text"
+            placeholder="Search meetings or notes..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-white border border-zinc-200 rounded-xl pl-9 pr-4 py-2 text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-zinc-900 transition-colors shadow-xs"
+          />
+        </div>
       </div>
+
+      {/* Meeting Cards Grid */}
+      {filteredMeetings.length === 0 ? (
+        <div className="text-center py-16 bg-white border border-zinc-200 rounded-3xl p-8 shadow-xs">
+          <div className="w-12 h-12 rounded-2xl bg-zinc-100 flex items-center justify-center text-zinc-400 mx-auto mb-3">
+            <Mic className="w-6 h-6" />
+          </div>
+          <h4 className="text-sm font-bold text-zinc-900 mb-1">No meeting records found</h4>
+          <p className="text-xs text-zinc-500 max-w-sm mx-auto mb-6">
+            {searchTerm
+              ? `No meetings match "${searchTerm}". Try a different keyword.`
+              : 'Your encrypted vault is currently empty. Start your first on-device recording above.'}
+          </p>
+          {!searchTerm && (
+            <button
+              onClick={onStartRecording}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-semibold text-xs shadow-sm transition-all cursor-pointer"
+            >
+              <Mic className="w-3.5 h-3.5" />
+              Start Recording
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filteredMeetings.map((meeting) => (
+            <MeetingCard
+              key={meeting.id}
+              meeting={meeting}
+              onSelect={onSelectMeeting}
+              onDelete={(id, e) => onDeleteMeeting(id, e)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

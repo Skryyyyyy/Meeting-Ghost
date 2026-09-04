@@ -5,10 +5,12 @@ import { AuthView } from './views/AuthView';
 import { HomeView } from './views/HomeView';
 import { RecordingView } from './views/RecordingView';
 import { SummaryView } from './views/SummaryView';
+import { NotFoundView } from './views/NotFoundView';
 import { ProcessingModal } from './components/ProcessingModal';
 import { SettingsModal } from './components/SettingsModal';
 import { PrivacySettingsModal } from './components/PrivacySettingsModal';
 import { GlobalTasksModal } from './components/GlobalTasksModal';
+import { CommandPalette } from './components/CommandPalette';
 import { InactivityLock } from './components/InactivityLock';
 import { CookieBanner } from './components/CookieBanner';
 import { MeetingData, MeetingTemplate, ProcessingStage, TranscriptionLanguage, MeetingBookmark } from './types/meeting';
@@ -42,6 +44,7 @@ export function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
   const [isGlobalTasksOpen, setIsGlobalTasksOpen] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [hasWebGPU, setHasWebGPU] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -89,10 +92,18 @@ export function App() {
       setHasWebGPU(true);
     }
 
-    // Set up activity listeners
+    // Set up activity listeners & Cmd+K hotkey
     const handleActivity = () => resetInactivityTimer();
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      resetInactivityTimer();
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen((prev) => !prev);
+      }
+    };
+
     window.addEventListener('mousemove', handleActivity);
-    window.addEventListener('keydown', handleActivity);
+    window.addEventListener('keydown', handleGlobalKeyDown);
     resetInactivityTimer();
 
     // Clean up media tracks on tab unload/close synchronously
@@ -115,7 +126,7 @@ export function App() {
 
     return () => {
       window.removeEventListener('mousemove', handleActivity);
-      window.removeEventListener('keydown', handleActivity);
+      window.removeEventListener('keydown', handleGlobalKeyDown);
       window.removeEventListener('beforeunload', handleUnload);
       window.removeEventListener('pagehide', handleUnload);
       if (unsubscribeAuth) unsubscribeAuth();
@@ -452,7 +463,23 @@ export function App() {
             onUpdateMeeting={handleUpdateMeeting}
           />
         )}
+
+        {view === 'summary' && !activeMeeting && (
+          <NotFoundView onNavigateHome={() => setView('home')} />
+        )}
       </main>
+
+      {/* Global Command Palette (Ctrl+K / Cmd+K) */}
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        meetings={meetings}
+        onSelectMeeting={handleSelectMeeting}
+        onStartRecording={handleStartRecording}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenPrivacyModal={() => setIsPrivacyModalOpen(true)}
+        onOpenGlobalTasks={() => setIsGlobalTasksOpen(true)}
+      />
 
       {/* Global Commitments Rollup Modal */}
       <GlobalTasksModal
