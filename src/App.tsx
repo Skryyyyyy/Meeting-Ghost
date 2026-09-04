@@ -11,7 +11,7 @@ import { PrivacySettingsModal } from './components/PrivacySettingsModal';
 import { GlobalTasksModal } from './components/GlobalTasksModal';
 import { InactivityLock } from './components/InactivityLock';
 import { CookieBanner } from './components/CookieBanner';
-import { MeetingData, MeetingTemplate, ProcessingStage } from './types/meeting';
+import { MeetingData, MeetingTemplate, ProcessingStage, TranscriptionLanguage, MeetingBookmark } from './types/meeting';
 import { AudioRecorder, resampleAudioBlobTo16kHz } from './services/audio';
 import { transcribeAudio, summarizeTranscript } from './services/aiPipeline';
 import { auth, onAuthStateChanged } from './services/firebase';
@@ -46,6 +46,7 @@ export function App() {
   const [hasWebGPU, setHasWebGPU] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<MeetingTemplate>('general');
+  const [selectedLanguage, setSelectedLanguage] = useState<TranscriptionLanguage>('en');
   const [livePartialTranscript, setLivePartialTranscript] = useState<string>('');
 
   const recorderRef = useRef<AudioRecorder>(new AudioRecorder());
@@ -205,7 +206,7 @@ export function App() {
     setView('home');
   };
 
-  const handleStopAndProcess = async () => {
+  const handleStopAndProcess = async (bookmarks?: MeetingBookmark[]) => {
     if (streamingIntervalRef.current) {
       clearInterval(streamingIntervalRef.current);
       streamingIntervalRef.current = null;
@@ -216,7 +217,13 @@ export function App() {
 
     try {
       const audioBlob = await recorderRef.current.stop();
-      await processAudioBlob(audioBlob, 'Meeting on ' + new Date().toLocaleDateString(), selectedTemplate);
+      await processAudioBlob(
+        audioBlob,
+        'Meeting on ' + new Date().toLocaleDateString(),
+        selectedTemplate,
+        selectedLanguage,
+        bookmarks
+      );
     } catch (err) {
       console.error('Processing error:', err);
       alert('An error occurred during on-device processing: ' + err);
@@ -229,7 +236,7 @@ export function App() {
     setProcessingStage('audio_prep');
     setProcessingStatus(`Loading uploaded file "${file.name}"...`);
     try {
-      await processAudioBlob(file, file.name.replace(/\.[^/.]+$/, ''), selectedTemplate);
+      await processAudioBlob(file, file.name.replace(/\.[^/.]+$/, ''), selectedTemplate, selectedLanguage);
     } catch (err) {
       console.error('File processing error:', err);
       alert('Failed to process uploaded audio file: ' + err);
@@ -237,7 +244,13 @@ export function App() {
     }
   };
 
-  const processAudioBlob = async (blob: Blob, defaultTitle: string, template: MeetingTemplate = 'general') => {
+  const processAudioBlob = async (
+    blob: Blob,
+    defaultTitle: string,
+    template: MeetingTemplate = 'general',
+    language: TranscriptionLanguage = 'en',
+    bookmarks?: MeetingBookmark[]
+  ) => {
     setProcessingStage('audio_prep');
     setProcessingStatus('Resampling audio to 16kHz mono Float32 tensor on-device...');
     const floatArray = await resampleAudioBlobTo16kHz(blob);
@@ -265,6 +278,7 @@ export function App() {
       id: `meet-${Date.now()}`,
       title: summaryResult.title || defaultTitle,
       template,
+      language,
       createdAt: Date.now(),
       durationSeconds: durationSeconds || 60,
       audioBlob: blob,
@@ -277,6 +291,7 @@ export function App() {
       actionItems: summaryResult.actionItems,
       followUpDraft: summaryResult.followUpDraft,
       participants: summaryResult.participants,
+      bookmarks: bookmarks && bookmarks.length > 0 ? bookmarks : undefined,
     };
 
     await saveMeeting(newMeeting);
@@ -424,6 +439,8 @@ export function App() {
             getWaveformData={(arr) => recorderRef.current.getWaveformData(arr)}
             selectedTemplate={selectedTemplate}
             onSelectTemplate={setSelectedTemplate}
+            selectedLanguage={selectedLanguage}
+            onSelectLanguage={setSelectedLanguage}
             livePartialTranscript={livePartialTranscript}
           />
         )}

@@ -305,6 +305,29 @@ export const SummaryView: React.FC<SummaryViewProps> = ({
                 </ul>
               </div>
             )}
+
+            {/* Meeting Milestone Bookmarks */}
+            {meeting.bookmarks && meeting.bookmarks.length > 0 && (
+              <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500 mb-3">
+                  Meeting Milestone Bookmarks ({meeting.bookmarks.length})
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {meeting.bookmarks.map((bm, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => handleSeekAudio(bm.timestamp)}
+                      className="flex items-center justify-between p-3 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 transition-colors cursor-pointer text-xs"
+                    >
+                      <span className="font-semibold text-zinc-900">{bm.label}</span>
+                      <span className="font-mono text-[11px] font-bold text-zinc-500 bg-white px-2 py-0.5 rounded border border-zinc-200">
+                        {Math.floor(bm.timestamp / 60)}:{(bm.timestamp % 60).toString().padStart(2, '0')}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
