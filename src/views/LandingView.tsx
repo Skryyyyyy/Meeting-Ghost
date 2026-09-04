@@ -74,13 +74,11 @@ export const LandingView: React.FC<LandingViewProps> = ({
             className="flex items-center space-x-3 cursor-pointer"
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           >
-            <div
-              className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm shadow-sm ${
-                isDarkMode ? 'bg-white text-black' : 'bg-zinc-900 text-white'
-              }`}
-            >
-              👻
-            </div>
+            <img
+              src="/logo.png"
+              alt="Meeting Ghost Logo"
+              className="w-9 h-9 rounded-xl object-cover shadow-sm ring-1 ring-zinc-700/50"
+            />
             <div className="flex items-center space-x-2">
               <span className="font-bold text-base tracking-tight">Meeting Ghost</span>
               <span
@@ -531,8 +529,12 @@ export const LandingView: React.FC<LandingViewProps> = ({
         }`}
       >
         <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center space-x-2">
-            <span className="text-base">👻</span>
+          <div className="flex items-center space-x-2.5">
+            <img
+              src="/logo.png"
+              alt="Logo"
+              className="w-5 h-5 rounded-md object-cover ring-1 ring-zinc-700/50"
+            />
             <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-zinc-900'}`}>Meeting Ghost</span>
             <span>• 100% On-Device Meeting AI</span>
           </div>

@@ -26,9 +26,11 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="border-b border-zinc-200 bg-white/90 backdrop-blur-md sticky top-0 z-30">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         <div className="flex items-center space-x-3 cursor-pointer" onClick={onNavigateLanding}>
-          <div className="w-10 h-10 rounded-xl bg-zinc-900 text-white flex items-center justify-center shadow-md shadow-zinc-200">
-            <span className="text-xl select-none">👻</span>
-          </div>
+          <img
+            src="/logo.png"
+            alt="Meeting Ghost Logo"
+            className="w-10 h-10 rounded-xl object-cover shadow-sm ring-1 ring-zinc-200"
+          />
           <div>
             <div className="flex items-center space-x-2">
               <h1 className="font-bold text-lg text-zinc-900 tracking-tight">Meeting Ghost</h1>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Ghost, Home, RefreshCw, ShieldCheck } from 'lucide-react';
+import { Home, RefreshCw, ShieldCheck } from 'lucide-react';
 
 interface NotFoundViewProps {
   onNavigateHome: () => void;
@@ -14,9 +14,11 @@ export const NotFoundView: React.FC<NotFoundViewProps> = ({
     <div className="min-h-[80vh] flex flex-col items-center justify-center px-4 py-12 text-center max-w-lg mx-auto select-none">
       {/* 404 Monochromatic Badge */}
       <div className="relative mb-6">
-        <div className="w-24 h-24 rounded-3xl bg-zinc-100 border border-zinc-200 flex items-center justify-center shadow-lg mx-auto">
-          <Ghost className="w-12 h-12 text-zinc-900 animate-pulse" />
-        </div>
+        <img
+          src="/logo.png"
+          alt="Meeting Ghost"
+          className="w-24 h-24 rounded-3xl object-cover shadow-lg mx-auto ring-1 ring-zinc-200"
+        />
         <span className="absolute -bottom-2 -right-2 px-2.5 py-0.5 rounded-full bg-zinc-900 text-white text-xs font-mono font-bold border-2 border-white shadow-xs">
           404
         </span>

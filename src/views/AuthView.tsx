@@ -167,9 +167,11 @@ export const AuthView: React.FC<AuthViewProps> = ({
         {/* Auth Card */}
         <div className="bg-white border border-zinc-200 rounded-3xl p-8 shadow-xl relative overflow-hidden">
           <div className="text-center mb-6">
-            <div className="w-14 h-14 mx-auto rounded-2xl bg-zinc-100 flex items-center justify-center text-zinc-900 mb-4 border border-zinc-200">
-              <Lock className="w-7 h-7" />
-            </div>
+            <img
+              src="/logo.png"
+              alt="Meeting Ghost"
+              className="w-16 h-16 mx-auto rounded-2xl object-cover mb-4 shadow-md ring-1 ring-zinc-200"
+            />
 
             <h2 className="text-xl sm:text-2xl font-extrabold text-zinc-900 tracking-tight">
               {mode === 'signup'
