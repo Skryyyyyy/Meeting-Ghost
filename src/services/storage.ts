@@ -171,3 +171,18 @@ export async function syncFromBackendCloud(): Promise<number> {
     return 0;
   }
 }
+
+export async function getStorageQuotaInfo(): Promise<{ usageMB: number; quotaMB: number; percent: number }> {
+  if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.estimate) {
+    try {
+      const estimate = await navigator.storage.estimate();
+      const usageMB = Math.round((estimate.usage || 0) / (1024 * 1024));
+      const quotaMB = Math.round((estimate.quota || 0) / (1024 * 1024));
+      const percent = quotaMB > 0 ? Math.min(100, Math.round((usageMB / quotaMB) * 100)) : 0;
+      return { usageMB, quotaMB, percent };
+    } catch {
+      return { usageMB: 0, quotaMB: 0, percent: 0 };
+    }
+  }
+  return { usageMB: 0, quotaMB: 0, percent: 0 };
+}

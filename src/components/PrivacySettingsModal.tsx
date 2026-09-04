@@ -10,10 +10,11 @@ import {
   Activity,
   Cloud,
   RefreshCw,
+  HardDrive,
 } from 'lucide-react';
 import { getCurrentUser, resetMasterPin } from '../services/auth';
 import { getCookiePreferences, saveCookiePreferences, sanitizeAndCheckSql } from '../services/security';
-import { getMeetings, syncFromBackendCloud } from '../services/storage';
+import { getMeetings, syncFromBackendCloud, getStorageQuotaInfo } from '../services/storage';
 
 interface PrivacySettingsModalProps {
   isOpen: boolean;
@@ -33,9 +34,16 @@ export const PrivacySettingsModal: React.FC<PrivacySettingsModalProps> = ({
   const [pinError, setPinError] = useState('');
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [storageQuota, setStorageQuota] = useState<{ usageMB: number; quotaMB: number; percent: number } | null>(null);
 
   const [cookiePrefs, setCookiePrefs] = useState(getCookiePreferences());
   const currentUser = getCurrentUser();
+
+  React.useEffect(() => {
+    if (isOpen) {
+      getStorageQuotaInfo().then(setStorageQuota);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -343,6 +351,29 @@ export const PrivacySettingsModal: React.FC<PrivacySettingsModalProps> = ({
           {/* 5. Data Portability & GDPR Right to Delete */}
           {activeTab === 'export' && (
             <div className="space-y-4">
+              {storageQuota && (
+                <div className="p-4 border border-zinc-200 bg-zinc-50 rounded-2xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 font-bold text-zinc-900">
+                      <HardDrive className="w-4 h-4 text-zinc-900" />
+                      <span>Origin Storage Quota</span>
+                    </div>
+                    <span className="font-mono text-[11px] font-bold text-zinc-800">
+                      {storageQuota.usageMB} MB / {storageQuota.quotaMB} MB ({storageQuota.percent}%)
+                    </span>
+                  </div>
+                  <div className="w-full bg-zinc-200 h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className="bg-zinc-900 h-full rounded-full transition-all"
+                      style={{ width: `${Math.max(2, storageQuota.percent)}%` }}
+                    />
+                  </div>
+                  <p className="text-[10px] text-zinc-500">
+                    Encrypted IndexedDB records and cached WebGPU model weights stored locally.
+                  </p>
+                </div>
+              )}
+
               <div className="p-5 border border-zinc-200 rounded-2xl space-y-3">
                 <div className="flex items-center gap-2">
                   <Download className="w-4 h-4 text-zinc-900" />
