@@ -140,12 +140,13 @@ export class AudioRecorder {
     this.mediaStream = null;
     this.mediaRecorder = null;
     this.audioContext = null;
+    this.audioChunks = [];
   }
 }
 
 /**
  * Resamples any standard browser audio blob into a 16kHz mono Float32Array
- * compatible with Whisper models, with automatic buffer memory disposal.
+ * compatible with Whisper models, with automatic buffer memory zeroing.
  */
 export async function resampleAudioBlobTo16kHz(audioBlob: Blob): Promise<Float32Array> {
   const arrayBuffer = await audioBlob.arrayBuffer();

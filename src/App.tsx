@@ -14,6 +14,7 @@ import { CookieBanner } from './components/CookieBanner';
 import { MeetingData, MeetingTemplate, ProcessingStage } from './types/meeting';
 import { AudioRecorder, resampleAudioBlobTo16kHz } from './services/audio';
 import { transcribeAudio, summarizeTranscript } from './services/aiPipeline';
+import { auth, onAuthStateChanged } from './services/firebase';
 import {
   isVaultSetup,
   isVaultUnlocked,
@@ -100,11 +101,23 @@ export function App() {
     window.addEventListener('beforeunload', handleUnload);
     window.addEventListener('pagehide', handleUnload);
 
+    // Sync Firebase session revocation to vault lifecycle
+    let unsubscribeAuth: (() => void) | null = null;
+    if (auth) {
+      unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+        if (!user && page === 'app') {
+          // If remote session was revoked, secure the local session
+          handleLockVault();
+        }
+      });
+    }
+
     return () => {
       window.removeEventListener('mousemove', handleActivity);
       window.removeEventListener('keydown', handleActivity);
       window.removeEventListener('beforeunload', handleUnload);
       window.removeEventListener('pagehide', handleUnload);
+      if (unsubscribeAuth) unsubscribeAuth();
       if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
       if (streamingIntervalRef.current) clearInterval(streamingIntervalRef.current);
     };

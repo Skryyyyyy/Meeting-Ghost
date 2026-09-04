@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Copy, Check, Download, Printer } from 'lucide-react';
+import { Mail, Copy, Check, Download, Printer, FileDown } from 'lucide-react';
 
 interface FollowUpComposerProps {
   draft: string;
@@ -29,10 +29,10 @@ export const FollowUpComposer: React.FC<FollowUpComposerProps> = ({
     const sanitizedSubject = meetingTitle.replace(/[\r\n]/g, ' ').slice(0, 100);
     const subject = encodeURIComponent(`Recap & Next Steps: ${sanitizedSubject}`);
     
-    // Check URL length limit (approx 1800 chars safe max)
+    // Check URL length limit (approx 1200 chars safe max)
     let bodyText = draft;
-    if (bodyText.length > 1500) {
-      bodyText = bodyText.slice(0, 1500) + '\n\n[... Full notes copied to clipboard]';
+    if (bodyText.length > 1200) {
+      bodyText = bodyText.slice(0, 1200) + '\n\n[... Full recap copied to clipboard]';
       navigator.clipboard.writeText(draft);
     }
 
@@ -47,6 +47,29 @@ export const FollowUpComposer: React.FC<FollowUpComposerProps> = ({
     const a = document.createElement('a');
     a.href = url;
     a.download = `${meetingTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-followup.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadEML = () => {
+    const sanitizedSubject = meetingTitle.replace(/[\r\n]/g, ' ');
+    const emlContent = [
+      'MIME-Version: 1.0',
+      'Content-Type: text/plain; charset=UTF-8',
+      `Subject: Recap & Next Steps: ${sanitizedSubject}`,
+      `Date: ${new Date().toUTCString()}`,
+      'X-Unsent: 1',
+      '',
+      draft,
+    ].join('\r\n');
+
+    const blob = new Blob([emlContent], { type: 'message/rfc822' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${meetingTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-draft.eml`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -75,6 +98,13 @@ export const FollowUpComposer: React.FC<FollowUpComposerProps> = ({
             title="Print / Save as PDF"
           >
             <Printer className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleDownloadEML}
+            className="p-2 rounded-xl text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 transition-colors cursor-pointer"
+            title="Download .EML Email Draft"
+          >
+            <FileDown className="w-4 h-4" />
           </button>
           <button
             onClick={handleDownloadMarkdown}
